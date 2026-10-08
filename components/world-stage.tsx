@@ -7,6 +7,7 @@ import * as THREE from "three";
 import type { City } from "@/lib/cities";
 
 const EARTH_RADIUS = 1.28;
+const ASSET_BASE = import.meta.env.BASE_URL ?? "/";
 
 function cityVector(lat: number, lon: number, radius = EARTH_RADIUS) {
   const phi = ((90 - lat) * Math.PI) / 180;
@@ -32,8 +33,8 @@ function currentSunDirection(date = new Date()) {
 
 function EarthSurface() {
   const [dayTexture, nightTexture] = useLoader(THREE.TextureLoader, [
-    "/textures/earth-day.jpg",
-    "/textures/earth-night.png",
+    `${ASSET_BASE}textures/earth-day.jpg`,
+    `${ASSET_BASE}textures/earth-night.png`,
   ]);
 
   useEffect(() => {

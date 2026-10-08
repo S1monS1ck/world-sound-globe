@@ -17,6 +17,14 @@ pnpm dev
 pnpm build
 ```
 
+国内静态托管构建：
+
+```bash
+pnpm build:static
+```
+
+产物位于 `site-dist/`，可以直接上传到腾讯 EdgeOne Pages 等国内静态托管平台；无需 Git 仓库。项目根目录生成的 `edgeone-upload.zip` 是已验证的直接上传包。
+
 ## 结构
 
 - `app/`：页面入口、全局视觉系统和元数据。

@@ -37,6 +37,8 @@ yarn-error.log*
 # typescript
 next-env.d.ts
 /dist/
+/site-dist/
+/edgeone-upload.zip
 /.wrangler/
 # Checkout-local execution profile and tool state; never publish them.
 /.sites-runtime/
