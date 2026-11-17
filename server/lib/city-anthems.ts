@@ -11,6 +11,6 @@
 export const CITY_ANTHEMS: Record<string, string[]> = {
   beijing: ["北京奥运会", "北京欢迎你"],
   shanghai: ["上海滩 叶丽仪", "夜上海 周璇"],
-  "hong-kong": ["东方之珠 罗大佑"],
+  "hong-kong": ["东方之珠 罗大佑", "王菲 季候风"],
   liverpool: ["Penny Lane The Beatles"],
 };
