@@ -1078,8 +1078,8 @@ input:focus-visible {
    (Chromium), inner highlight rings and a specular top edge. Engines without
    backdrop-filter: url() keep their existing frosted treatment. */
 :root {
-  --glass-tint: rgba(8, 15, 19, 0.5);
-  --glass-tint-deep: rgba(5, 10, 14, 0.64);
+  --glass-tint: rgba(24, 24, 26, 0.6);
+  --glass-tint-deep: rgba(16, 16, 18, 0.72);
   --glass-hairline: rgba(255, 255, 255, 0.13);
 }
 
@@ -1087,8 +1087,7 @@ input:focus-visible {
 .place-card.is-visible,
 .music-info,
 .city-drawer,
-.player,
-.mode-switch {
+.player-bar {
   border-color: var(--glass-hairline);
   background: var(--glass-tint);
   box-shadow:
@@ -1104,8 +1103,7 @@ input:focus-visible {
   .place-card,
   .music-info,
   .city-drawer,
-  .player,
-  .mode-switch {
+  .player-bar {
     backdrop-filter: url("#liquid-glass-edge") blur(14px) saturate(175%) brightness(1.07);
   }
 }
@@ -1114,8 +1112,7 @@ input:focus-visible {
 .place-card::before,
 .music-info::before,
 .city-drawer::before,
-.player::before,
-.mode-switch::before {
+.player-bar::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -1398,4 +1395,231 @@ body,
   box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}
+
+/* ===== Apple Music dark layout: sidebar + transport bar ===== */
+:root {
+  --am-sidebar: rgba(16, 16, 18, 0.82);
+  --am-accent: #fa233c;
+  --am-text: #f5f5f7;
+  --am-secondary: rgba(245, 245, 247, 0.6);
+  --am-hairline: rgba(255, 255, 255, 0.09);
+}
+
+.sidebar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 60;
+  width: 236px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 16px 14px 12px;
+  background: var(--am-sidebar);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  border-right: 1px solid var(--am-hairline);
+}
+
+.sidebar-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-start;
+  padding: 4px 10px 12px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sidebar-brand strong { font-family: var(--sans); font-size: 14px; font-weight: 700; letter-spacing: 0.06em; color: var(--am-text); }
+.sidebar-brand small { font-family: var(--sans); font-size: 10px; color: var(--am-secondary); }
+
+.sidebar-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--am-secondary);
+  font-family: var(--sans);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.sidebar-search:hover { background: rgba(255, 255, 255, 0.13); color: var(--am-text); }
+.sidebar-search svg { width: 14px; height: 14px; }
+
+.sidebar-section {
+  margin: 8px 10px 3px;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgba(245, 245, 247, 0.42);
+}
+
+.sidebar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--am-text);
+  text-align: left;
+  transition: background 150ms ease;
+}
+
+.sidebar-row:hover { background: rgba(255, 255, 255, 0.07); }
+.sidebar-row.is-active { background: rgba(250, 35, 60, 0.16); color: #fb7d8d; }
+.sidebar-row svg { width: 15px; height: 15px; flex: none; }
+.sidebar-row small { margin-left: auto; font-size: 11px; color: var(--am-secondary); font-variant-numeric: tabular-nums; }
+
+.sidebar-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--am-hairline);
+}
+
+.sidebar-clock {
+  margin: 8px 10px 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--sans);
+  font-size: 11px;
+  color: var(--am-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.sidebar-clock small { margin-left: auto; font-size: 9px; letter-spacing: 0.08em; }
+
+/* Transport bar: controls | LCD | utilities, like desktop Music. */
+.player-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 65;
+  height: 64px;
+  display: grid;
+  grid-template-columns: 1fr minmax(300px, 520px) 1fr;
+  align-items: center;
+  padding: 0 18px;
+  background: rgba(24, 24, 26, 0.8);
+  backdrop-filter: blur(30px) saturate(150%);
+  -webkit-backdrop-filter: blur(30px) saturate(150%);
+  border-top: 1px solid var(--am-hairline);
+}
+
+.pb-controls { display: flex; align-items: center; gap: 6px; justify-self: start; }
+
+.pb-skip {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--am-secondary);
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+.pb-skip:hover:not(:disabled) { color: var(--am-text); }
+.pb-skip:disabled { opacity: 0.35; cursor: default; }
+.pb-skip svg { width: 16px; height: 16px; }
+
+.pb-play {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: var(--am-accent);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(250, 35, 60, 0.35);
+  transition: transform 150ms ease;
+}
+
+.pb-play:hover:not(:disabled) { transform: scale(1.06); }
+.pb-play:disabled { opacity: 0.4; cursor: default; transform: none; }
+.pb-play svg { width: 15px; height: 15px; }
+
+.pb-lcd {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 150ms ease;
+}
+
+.pb-lcd:hover { background: rgba(255, 255, 255, 0.06); }
+
+.pb-art {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 7px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(120% 100% at 50% 15%, var(--city-accent, #54565a) 0%, rgba(0, 0, 0, 0.55) 80%);
+}
+
+.pb-art span { font-family: var(--sans); font-size: 14px; font-weight: 600; color: rgba(255, 255, 255, 0.9); }
+.pb-art img { width: 100%; height: 100%; object-fit: cover; }
+
+.pb-meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.pb-meta strong { font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--am-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-meta small { font-family: var(--sans); font-size: 11px; color: var(--am-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.pb-progress { display: block; width: 100%; height: 2px; margin-top: 2px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.pb-progress i { display: block; height: 100%; border-radius: inherit; background: var(--am-accent); transition: width 320ms linear; }
+
+.pb-right { justify-self: end; display: flex; align-items: center; gap: 12px; }
+.pb-source { font-family: var(--sans); font-size: 11px; color: var(--am-secondary); }
+
+/* City detail card becomes the content header, top-left of the canvas area. */
+.place-card {
+  left: 260px;
+  top: 84px;
+  bottom: auto;
+  width: min(380px, calc(100vw - 300px));
+}
+
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .place-card { left: 20px; top: auto; bottom: 148px; width: min(360px, calc(100vw - 40px)); }
 }

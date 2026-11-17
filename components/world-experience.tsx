@@ -3,13 +3,18 @@
 import {
   ArrowLeft,
   ChevronRight,
+  Disc3,
   Globe2,
   Languages,
+  LayoutGrid,
   Maximize2,
   Minimize2,
   Pause,
   Play,
+  Radio,
   Search,
+  SkipBack,
+  SkipForward,
   Volume2,
   X,
 } from "lucide-react";
@@ -261,6 +266,18 @@ export function WorldExperience() {
     audio.play().catch(() => setPlayState("error"));
   }, [playState, currentAudioSrc]);
 
+  // Soul mode is a queue: the skip buttons walk the city's three previews.
+  const stepTrack = useCallback((step: number) => {
+    if (mode !== "soul" || cityTracks.length === 0) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+    const next = (trackIndex + step + cityTracks.length) % cityTracks.length;
+    setTrackIndex(next);
+    audio.src = cityTracks[next].previewUrl;
+    setPlayState("loading");
+    audio.play().catch(() => setPlayState("error"));
+  }, [mode, cityTracks, trackIndex]);
+
   // Fetch the Apple Music track notes whenever the selected city changes.
   useEffect(() => {
     if (!selectedCity) {
@@ -406,45 +423,54 @@ export function WorldExperience() {
       <div className="film-grain" aria-hidden="true" />
       <div className="edge-vignette" aria-hidden="true" />
 
-      <header className="topbar">
-        <button className="brand" type="button" onClick={returnToEarth} aria-label={t.global}>
-          <span className="brand-mark"><span /></span>
-          <span>
-            <strong>WORLD / SOUND</strong>
-            <small>AN ATLAS OF PLACES & SOUND</small>
-          </span>
+      <aside className="sidebar" aria-label={locale === "zh" ? "导航" : "Navigation"}>
+        <button className="sidebar-brand" type="button" onClick={returnToEarth}>
+          <strong>WORLD / SOUND</strong>
+          <small>{locale === "zh" ? "世界声音地图" : "An atlas of places & sound"}</small>
         </button>
 
-        <div className="mode-switch" role="group" aria-label={locale === "zh" ? "收听模式" : "Listening mode"}>
-          <button className={mode === "now" ? "active" : ""} onClick={() => setMode("now")} type="button">
-            <span>{t.now}</span>
-            <small>{t.nowDescription}</small>
-          </button>
-          <button className={mode === "soul" ? "active" : ""} onClick={() => setMode("soul")} type="button">
-            <span>{t.soul}</span>
-            <small>{t.soulDescription}</small>
-          </button>
-        </div>
+        <button className="sidebar-search" type="button" onClick={() => setSearchOpen(true)}>
+          <Search aria-hidden="true" />
+          <span>{t.navSearch}</span>
+        </button>
 
-        <div className="top-actions">
-          <div className="earth-clock" title={locale === "zh" ? "北京时间" : "Beijing time"}>
-            <span className="live-dot" />
-            <span>{t.live}</span>
-            <strong>{clock ? formatBeijingTime(locale, clock) : "--:--:--"}</strong>
-          </div>
-          <button type="button" className="nav-search" onClick={() => setSearchOpen(true)}>
-            <Search aria-hidden="true" />
-            <span>{t.navSearch}</span>
-          </button>
-          <button type="button" className="icon-button language-button" onClick={() => setLocale(locale === "zh" ? "en" : "zh")} aria-label="Switch language">
+        <p className="sidebar-section">{locale === "zh" ? "探索" : "Explore"}</p>
+        <button className={`sidebar-row ${selectedCity ? "" : "is-active"}`} type="button" onClick={returnToEarth}>
+          <Globe2 aria-hidden="true" />
+          <span>{t.global}</span>
+        </button>
+        <button className="sidebar-row" type="button" onClick={() => setSearchOpen(true)}>
+          <LayoutGrid aria-hidden="true" />
+          <span>{t.searchTitle}</span>
+          <small>{cities.length}</small>
+        </button>
+
+        <p className="sidebar-section">{locale === "zh" ? "收听模式" : "Listening mode"}</p>
+        <button className={`sidebar-row ${mode === "now" ? "is-active" : ""}`} type="button" onClick={() => setMode("now")}>
+          <Radio aria-hidden="true" />
+          <span>{t.now}</span>
+        </button>
+        <button className={`sidebar-row ${mode === "soul" ? "is-active" : ""}`} type="button" onClick={() => setMode("soul")}>
+          <Disc3 aria-hidden="true" />
+          <span>{t.soul}</span>
+        </button>
+
+        <div className="sidebar-foot">
+          <button className="sidebar-row" type="button" onClick={() => setLocale(locale === "zh" ? "en" : "zh")}>
             <Languages aria-hidden="true" />
-            <span>{locale === "zh" ? "EN" : "中"}</span>
+            <span>{locale === "zh" ? "切换到 English" : "切换到中文"}</span>
           </button>
-          <button type="button" className="icon-button" onClick={toggleFullscreen} aria-label={fullscreen ? "Exit fullscreen" : "Enter fullscreen"}>
+          <button className="sidebar-row" type="button" onClick={toggleFullscreen}>
             {fullscreen ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+            <span>{locale === "zh" ? "全屏" : "Fullscreen"}</span>
           </button>
+          <p className="sidebar-clock">
+            <span className="live-dot" aria-hidden="true" />
+            {clock ? formatBeijingTime(locale, clock) : "--:--:--"}
+            <small>{t.live}</small>
+          </p>
         </div>
-      </header>
+      </aside>
 
       <section className={`place-card ${selectedCity ? "is-visible" : ""}`} aria-live="polite">
         <div className="card-content" key={selectedCity?.id ?? "global"}>
@@ -453,7 +479,7 @@ export function WorldExperience() {
             <button className="back-to-earth" type="button" onClick={returnToEarth}>
               <ArrowLeft aria-hidden="true" /> {t.reset}
             </button>
-            <p className="eyebrow">{selectedCity.region} · {t.cityMode}</p>
+            <p className="eyebrow">{selectedCity.region}</p>
             <div className="place-title-row">
               <div>
                 <span className="local-name">{selectedCity.localName}</span>
@@ -511,72 +537,66 @@ export function WorldExperience() {
         </div>
       )}
 
-      <aside className="system-rail" aria-label={locale === "zh" ? "系统状态" : "System status"}>
-        <div><Globe2 aria-hidden="true" /><span>{cities.length} {t.indexed}</span></div>
-        <small>NATURAL EARTH / NIGHT LIGHTS</small>
-      </aside>
       {selectedScene && <a className="map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>}
 
-      <section className="player" aria-label={locale === "zh" ? "播放器" : "Player"}>
-        <div
-          className={`record-art ${playState === "playing" ? "spinning" : ""}`}
-          style={{ "--city-accent": selectedCity?.accent ?? "#8caab3" } as CSSProperties}
-          role="button"
-          tabIndex={0}
+      <section className="player-bar" aria-label={locale === "zh" ? "播放器" : "Player"}>
+        <div className="pb-controls">
+          <button type="button" className="pb-skip" onClick={() => stepTrack(-1)} disabled={mode !== "soul" || cityTracks.length < 2} aria-label={locale === "zh" ? "上一首" : "Previous"}>
+            <SkipBack fill="currentColor" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            className="pb-play"
+            onClick={togglePlay}
+            disabled={!selectedCity || (playState !== "playing" && !currentAudioSrc)}
+            aria-label={playState === "playing" ? t.stopAudio : t.playAudio}
+          >
+            {playState === "loading" ? (
+              <Loader2 className="spin-icon" aria-hidden="true" />
+            ) : playState === "playing" ? (
+              <Pause fill="currentColor" aria-hidden="true" />
+            ) : (
+              <Play fill="currentColor" aria-hidden="true" />
+            )}
+          </button>
+          <button type="button" className="pb-skip" onClick={() => stepTrack(1)} disabled={mode !== "soul" || cityTracks.length < 2} aria-label={locale === "zh" ? "下一首" : "Next"}>
+            <SkipForward fill="currentColor" aria-hidden="true" />
+          </button>
+        </div>
+
+        <button
+          className="pb-lcd"
+          type="button"
           onClick={() => selectedCity && setNowPlayingOpen(true)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") setNowPlayingOpen(true);
-          }}
           aria-label={t.nowPlaying}
         >
-          <span />
-        </div>
-        <div className="track-meta">
-          <p>{track.title}</p>
-          <span>{track.artist}</span>
-          <small className="compact-preview-note">{t.mock}</small>
-        </div>
-        <button
-          type="button"
-          className="play-button"
-          onClick={togglePlay}
-          disabled={!selectedCity || (playState !== "playing" && !currentAudioSrc)}
-          aria-label={playState === "playing" ? t.stopAudio : t.playAudio}
-        >
-          {playState === "loading" ? (
-            <Loader2 className="spin-icon" aria-hidden="true" />
-          ) : playState === "playing" ? (
-            <Pause fill="currentColor" aria-hidden="true" />
-          ) : (
-            <Play fill="currentColor" aria-hidden="true" />
-          )}
+          <span className="pb-art" style={{ "--city-accent": selectedCity?.accent ?? "#54565a" } as CSSProperties}>
+            {mode === "soul" && cityTracks[trackIndex]?.artworkUrl
+              ? <img src={cityTracks[trackIndex].artworkUrl} alt="" />
+              : <span>{selectedCity?.localName.slice(0, 2) ?? "WS"}</span>}
+          </span>
+          <span className="pb-meta">
+            <strong>{track.title}</strong>
+            <small>{track.artist}</small>
+            <span className="pb-progress" aria-hidden="true">
+              <i style={{ width: `${mode === "soul" ? progress : mode === "now" && playState === "playing" ? 100 : progress}%` }} />
+            </span>
+          </span>
         </button>
-        <div className="timeline">
-          <div className="waveform" aria-hidden="true">
-            {Array.from({ length: 42 }, (_, index) => (
-              <i
-                key={index}
-                className={index / 42 < progress / 100 ? "passed" : ""}
-                style={{ height: `${5 + ((index * 17) % 18)}px` }}
-              />
-            ))}
-          </div>
-          <div className="timeline-caption">
-            <span>
-              {playState === "loading"
-                ? t.loadingAudio
-                : playState === "error"
-                  ? t.audioFailed
-                  : playState === "playing"
-                    ? mode === "now" ? t.liveNow : t.previewClip
-                    : t.paused}
-            </span>
-            <span>
-              {mode === "now" ? (radio ? `${t.liveLabel} · Radio Browser` : t.mock) : t.appleSource}
-            </span>
-          </div>
+
+        <div className="pb-right">
+          <span className="pb-source">{playState === "error" ? t.audioFailed : mode === "now" ? t.liveLabel : t.appleSource}</span>
+          <Volume2 className="volume-icon" aria-hidden="true" />
+          <button
+            type="button"
+            className="icon-button music-info-toggle"
+            onClick={() => setMusicInfoOpen((value) => !value)}
+            disabled={!selectedCity}
+            aria-label={t.musicNotes}
+          >
+            <Info aria-hidden="true" />
+          </button>
         </div>
-        <Volume2 className="volume-icon" aria-hidden="true" />
         {/* Hidden transport element: the actual audio engine behind the player. */}
         <audio
           ref={audioRef}
@@ -606,15 +626,6 @@ export function WorldExperience() {
             }
           }}
         />
-        <button
-          type="button"
-          className="icon-button music-info-toggle"
-          onClick={() => setMusicInfoOpen((value) => !value)}
-          disabled={!selectedCity}
-          aria-label={t.musicNotes}
-        >
-          <Info aria-hidden="true" />
-        </button>
       </section>
 
       {nowPlayingOpen && selectedCity && (
