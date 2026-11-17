@@ -119,6 +119,8 @@ export function WorldExperience() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredCity, setHoveredCity] = useState<City | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
+  // Delayed unmount lets the drawer play its exit animation before removal.
+  const [searchClosing, setSearchClosing] = useState(false);
   const [query, setQuery] = useState("");
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(23);
@@ -192,13 +194,22 @@ export function WorldExperience() {
     );
   }, [query]);
 
+  const closeSearch = useCallback(() => {
+    if (searchClosing) return;
+    setSearchClosing(true);
+    window.setTimeout(() => {
+      setSearchOpen(false);
+      setSearchClosing(false);
+    }, 280);
+  }, [searchClosing]);
+
   const selectCity = useCallback((id: string) => {
     setSelectedId(id);
     setHoveredCity(null);
-    setSearchOpen(false);
+    closeSearch();
     setQuery("");
     setProgress(0);
-  }, []);
+  }, [closeSearch]);
 
   const returnToEarth = useCallback(() => {
     setSelectedId(null);
@@ -213,14 +224,14 @@ export function WorldExperience() {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       if (searchOpen) {
-        setSearchOpen(false);
+        closeSearch();
         return;
       }
       if (selectedId) returnToEarth();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [entered, searchOpen, selectedId, returnToEarth]);
+  }, [entered, searchOpen, selectedId, returnToEarth, closeSearch]);
 
   const toggleFullscreen = async () => {
     try {
@@ -310,7 +321,8 @@ export function WorldExperience() {
       </header>
 
       <section className={`place-card ${selectedCity ? "is-visible" : ""}`} aria-live="polite">
-        {selectedCity ? (
+        <div className="card-content" key={selectedCity?.id ?? "global"}>
+          {selectedCity ? (
           <>
             <button className="back-to-earth" type="button" onClick={returnToEarth}>
               <ArrowLeft aria-hidden="true" /> {t.reset}
@@ -362,6 +374,7 @@ export function WorldExperience() {
             </button>
           </>
         )}
+        </div>
       </section>
 
       {hoveredCity && !selectedCity && (
@@ -429,9 +442,9 @@ export function WorldExperience() {
       )}
 
       {searchOpen && (
-        <section className="city-drawer" role="dialog" aria-modal="true" aria-labelledby="city-search-title"
+        <section className={`city-drawer ${searchClosing ? "is-closing" : ""}`} role="dialog" aria-modal="true" aria-labelledby="city-search-title"
           onKeyDown={(event) => {
-            if (event.key === "Escape") setSearchOpen(false);
+            if (event.key === "Escape") closeSearch();
             if (event.key !== "Tab") return;
             const controls = event.currentTarget.querySelectorAll<HTMLElement>("button, input");
             const first = controls[0];
@@ -449,7 +462,7 @@ export function WorldExperience() {
               <p className="eyebrow">WORLD INDEX · {cities.length}</p>
               <h2 id="city-search-title">{t.searchTitle}</h2>
             </div>
-            <button type="button" className="icon-button" onClick={() => setSearchOpen(false)} aria-label="Close">
+            <button type="button" className="icon-button" onClick={closeSearch} aria-label="Close">
               <X aria-hidden="true" />
             </button>
           </div>
