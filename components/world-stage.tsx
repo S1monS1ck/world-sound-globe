@@ -9,9 +9,8 @@ import { getCityScene } from "@/lib/city-scenes";
 import { bindCityPicking, pickCity } from "@/lib/city-picking";
 import { getCitySignature, getCityVisualAnchor } from "@/lib/city-signatures";
 import { CityDistrict } from "@/components/city-district";
+import { ASSET_BASE } from "@/lib/assets";
 import { EARTH_RADIUS, METERS_TO_WORLD, cityVector, tangentBasis } from "@/lib/globe";
-
-const ASSET_BASE = import.meta.env.BASE_URL ?? "/";
 
 function currentSunDirection(date = new Date()) {
   const start = Date.UTC(date.getUTCFullYear(), 0, 0);

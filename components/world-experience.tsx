@@ -13,15 +13,18 @@ import {
   Volume2,
   X,
 } from "lucide-react";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import dynamic from "next/dynamic";
 import { cities, getCity, type City } from "@/lib/cities";
 import { getCityScene } from "@/lib/city-scenes";
 import { getCitySignature } from "@/lib/city-signatures";
 import { companionLandmarksFor, curatedFor } from "@/lib/curated";
 import { SceneErrorBoundary } from "@/components/scene-error-boundary";
 
-const WorldStage = lazy(() =>
-  import("@/components/world-stage").then((module) => ({ default: module.WorldStage })),
+// WebGL only exists in the browser: keep the 3D stage out of server rendering.
+const WorldStage = dynamic(
+  () => import("@/components/world-stage").then((module) => ({ default: module.WorldStage })),
+  { ssr: false, loading: () => <div className="scene-loading" aria-hidden="true" /> },
 );
 
 type Locale = "zh" | "en";
@@ -266,18 +269,16 @@ export function WorldExperience() {
       <div className={`stage ${!entered ? "is-intro" : ""} ${selectedCity ? "is-city" : ""}`} aria-label={locale === "zh" ? "可交互三维地球" : "Interactive 3D earth"}>
         {webgl ? (
           <SceneErrorBoundary fallback={<WebGLFallback locale={locale} />}>
-            <Suspense fallback={<div className="scene-loading" aria-hidden="true" />}>
-              <WorldStage
-                cities={cities}
-                selectedCity={selectedCity}
-                onSelect={selectCity}
-                onHover={setHoveredCity}
-                reducedMotion={reducedMotion}
-                active={entered}
-                quickFocus={quickFocus}
-                onAutoReturn={returnToEarth}
-              />
-            </Suspense>
+            <WorldStage
+              cities={cities}
+              selectedCity={selectedCity}
+              onSelect={selectCity}
+              onHover={setHoveredCity}
+              reducedMotion={reducedMotion}
+              active={entered}
+              quickFocus={quickFocus}
+              onAutoReturn={returnToEarth}
+            />
           </SceneErrorBoundary>
         ) : (
           <WebGLFallback locale={locale} />

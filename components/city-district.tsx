@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import type { City } from "@/lib/cities";
+import { ASSET_BASE } from "@/lib/assets";
 import { getCityScene } from "@/lib/city-scenes";
 import { EARTH_RADIUS, EARTH_METERS, cityVector, tangentBasis } from "@/lib/globe";
 import { LandmarkModel } from "@/components/landmark-model";
@@ -23,7 +24,6 @@ type Geography = {
 type Point = { x: number; y: number };
 type AvoidRect = { minX: number; maxX: number; minY: number; maxY: number };
 const geographyCache = new Map<string, Promise<Geography>>();
-const ASSET_BASE = import.meta.env.BASE_URL ?? "/";
 // A compact on-globe miniature: legible at orbital distance without becoming a second landscape.
 const CITY_DISPLAY_SCALE = 0.00011;
 const DISPLAY_RADIUS_METERS = EARTH_RADIUS / CITY_DISPLAY_SCALE;
