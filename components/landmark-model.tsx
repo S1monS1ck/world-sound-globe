@@ -11,6 +11,7 @@ export type LandmarkKind =
   | "gateway-india"
   | "tokyo-tower"
   | "temple-of-heaven"
+  | "hall-of-supreme-harmony"
   | "canton-tower"
   | "taipei-101"
   | "bank-of-china-tower"
@@ -122,6 +123,16 @@ function archWall(width: number, height: number, depth: number, opening: number,
   shape.lineTo(-opening / 2, 0);
   shape.closePath();
   return new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 24 }).translate(0, 0, -depth / 2);
+}
+
+// Rectangular hip-roof frustum: a square pyramid trunk stretched along depth.
+// The top face shrinks by `topScale` and keeps the base's width/depth ratio.
+function rectFrustum(baseW: number, baseD: number, topScale: number, height: number) {
+  const geometry = new THREE.CylinderGeometry(baseW * Math.SQRT1_2 * topScale, baseW * Math.SQRT1_2, height, 4);
+  geometry.rotateY(Math.PI / 4);
+  geometry.scale(1, 1, baseD / baseW);
+  geometry.translate(0, height / 2, 0);
+  return geometry;
 }
 
 type TowerLevel = { y: number; half: number };
@@ -446,6 +457,83 @@ function templeOfHeaven() {
   return b.finish();
 }
 
+// Stylised Forbidden City compound: vermilion perimeter walls with gilded caps,
+// corner watch pavilions, a south gatehouse with a real through arch, and the
+// Hall of Supreme Harmony on a three-tier marble terrace with yellow-glazed
+// double eaves. The real 961m x 693m complex is compressed into one legible
+// block; the hall keeps roughly its published height. The gate faces the
+// miniature's south, along Beijing's central axis.
+// Reference: https://whc.unesco.org/en/list/439 / https://www.dpm.org.cn
+function hallOfSupremeHarmony() {
+  const b = new ModelBuilder({
+    marble: { color: "#d8d2bd", roughness: 0.92 },
+    stoneEdge: { color: "#f1e9d2", roughness: 0.82 },
+    vermilion: { color: "#8d2f2b", roughness: 0.78 },
+    redLight: { color: "#b44b3b", roughness: 0.8 },
+    wall: { color: "#7e2a26", roughness: 0.85 },
+    roof: { color: "#c9a24b", metalness: 0.24, roughness: 0.55 },
+    gold: { color: "#d8af61", metalness: 0.38, roughness: 0.48 },
+    shadow: { color: "#402d2c", roughness: 0.95 },
+  });
+
+  const W = 150, D = 100, WALL_H = 9, T = 3.2;
+  // Perimeter wall with gilded capping tiles.
+  for (const z of [-D / 2, D / 2]) {
+    b.box([0, WALL_H / 2, z], [W, WALL_H, T], "wall");
+    b.box([0, WALL_H + 0.4, z], [W + 1.4, 0.8, T + 1.2], "gold");
+  }
+  for (const x of [-W / 2, W / 2]) {
+    b.box([x, WALL_H / 2, 0], [T, WALL_H, D - T * 2], "wall");
+    b.box([x, WALL_H + 0.4, 0], [T + 1.2, 0.8, D - T * 2 + 1.4], "gold");
+  }
+  // Corner watch pavilions with small hip roofs.
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    const x = sx * (W / 2 - 6), z = sz * (D / 2 - 6);
+    b.box([x, 6.5, z], [10, 13, 10], "vermilion");
+    b.add(rectFrustum(13, 13, 0.45, 4.5), "roof", [x, 13, z]);
+    b.cylinder([x, 15.8, z], 0.25, 0.6, 1.4, "gold", 12);
+  }
+  // South gatehouse with a through arch and a small hip roof.
+  b.add(archWall(38, 15, 14, 12, 8, 5.5), "wall", [0, 0, D / 2 - 7]);
+  b.add(rectFrustum(42, 17, 0.5, 4.2), "roof", [0, 15, D / 2 - 7]);
+  b.box([0, 19.6, D / 2 - 7], [11, 1, 2], "gold");
+
+  // Three-tier marble terrace with balustrade rings.
+  const tiers: [number, number, number][] = [[64, 38, 2.3], [56, 32, 2.1], [48, 26, 1.9]];
+  const hallZ = -14;
+  let ty = 0;
+  for (const [w, d, h] of tiers) {
+    b.box([0, ty + h / 2, hallZ], [w, h, d], "marble");
+    b.box([0, ty + h + 0.35, hallZ - d / 2 + 0.4], [w - 0.4, 0.7, 0.5], "stoneEdge");
+    b.box([0, ty + h + 0.35, hallZ + d / 2 - 0.4], [w - 0.4, 0.7, 0.5], "stoneEdge");
+    b.box([-w / 2 + 0.4, ty + h + 0.35, hallZ], [0.5, 0.7, d - 0.8], "stoneEdge");
+    b.box([w / 2 - 0.4, ty + h + 0.35, hallZ], [0.5, 0.7, d - 0.8], "stoneEdge");
+    ty += h;
+  }
+  // Hall body with a column rhythm on the long facades.
+  b.box([0, ty + 5, hallZ], [44, 10, 26], "vermilion");
+  for (const side of [-1, 1]) {
+    for (let i = -4; i <= 4; i += 1) {
+      b.box([i * 4.8, ty + 5, hallZ + side * 13.1], [1.1, 9, 0.5], i % 2 ? "redLight" : "shadow");
+    }
+    b.box([side * 22.1, ty + 5, hallZ], [0.5, 9, 24], "shadow");
+  }
+  // Double-eave roof: broad lower skirt, clerestory, then the main hip roof.
+  b.add(rectFrustum(58, 40, 0.68, 3.4), "roof", [0, ty + 10, hallZ]);
+  b.box([0, ty + 10 + 3.4 + 2, hallZ], [33, 4, 19], "vermilion");
+  const ridgeY = ty + 10 + 3.4 + 4 + 5.6;
+  b.add(rectFrustum(38, 24, 0.28, 5.6), "roof", [0, ty + 10 + 3.4 + 4, hallZ]);
+  b.box([0, ridgeY + 0.4, hallZ], [15, 1, 1.4], "gold");
+  for (const sx of [-1, 1]) b.box([sx * 8.4, ridgeY + 0.9, hallZ], [1.6, 1.8, 1.4], "gold");
+
+  // Two flanking side pavilions complete the courtyard composition.
+  for (const sx of [-1, 1]) {
+    b.box([sx * 54, 3.5, hallZ], [26, 7, 18], "vermilion");
+    b.add(rectFrustum(30, 21, 0.5, 3.2), "roof", [sx * 54, 7, hallZ]);
+  }
+  return b.finish();
+}
+
 // Twisted hyperboloid lattice: two crossing column families between waisted rings.
 function cantonTower() {
   const b = new ModelBuilder({
@@ -590,6 +678,7 @@ const builders: Record<LandmarkKind, () => ModelPart[]> = {
   "gateway-india": gatewayIndia,
   "tokyo-tower": tokyoTower,
   "temple-of-heaven": templeOfHeaven,
+  "hall-of-supreme-harmony": hallOfSupremeHarmony,
   "canton-tower": cantonTower,
   "taipei-101": taipei101,
   "bank-of-china-tower": bankOfChinaTower,

@@ -21,6 +21,7 @@ type Geography = {
   coastline: Coordinate[][];
 };
 type Point = { x: number; y: number };
+type AvoidRect = { minX: number; maxX: number; minY: number; maxY: number };
 const geographyCache = new Map<string, Promise<Geography>>();
 const ASSET_BASE = import.meta.env.BASE_URL ?? "/";
 // A compact on-globe miniature: legible at orbital distance without becoming a second landscape.
@@ -105,7 +106,15 @@ function hash01(n: number) {
   return s - Math.floor(s);
 }
 
-function buildGeography(data: Geography, extent: number, restrained = false, clearRadius = 55) {
+function insideAnyRect(x: number, y: number, rects: AvoidRect[]) {
+  return rects.some((rect) => x >= rect.minX && x <= rect.maxX && y >= rect.minY && y <= rect.maxY);
+}
+
+// The stylised Forbidden City compound sits north of the Temple of Heaven along
+// the miniature's central axis; keep the OSM fabric out of its footprint.
+const PALACE_AVOID: AvoidRect = { minX: -320, maxX: 320, minY: 150, maxY: 580 };
+
+function buildGeography(data: Geography, extent: number, restrained = false, clearRadius = 55, avoidRects: AvoidRect[] = []) {
   const buildingBatches: THREE.BufferGeometry[][] = Array.from({ length: 4 }, () => []);
   const roofGeometries: THREE.BufferGeometry[] = [];
   const nearbyBuildings = data.buildings.map((building) => {
@@ -115,6 +124,7 @@ function buildGeography(data: Geography, extent: number, restrained = false, cle
     const depth = Math.max(...points.map((p) => p.y)) - Math.min(...points.map((p) => p.y));
     return { building, location, distance: Math.hypot(location.x, location.y), area: width * depth };
   }).filter(({ building, distance, area }) => distance > clearRadius && distance < extent * 0.95 && area > 35 && area < 14000 && building.height <= 100)
+    .filter(({ location }) => !insideAnyRect(location.x, location.y, avoidRects))
     .sort((a, b) => a.distance - b.distance)
     .slice(0, restrained ? 240 : extent < 300 ? 220 : extent < 450 ? 320 : 450);
   for (const { building, distance } of nearbyBuildings) {
@@ -179,7 +189,7 @@ function buildGeography(data: Geography, extent: number, restrained = false, cle
     const d = Math.hypot(x, y);
     if (d > limit || d < clearRadius + 10) continue;
     const key = `${gx},${gy}`;
-    if (roadKeys.has(key) || solidKeys.has(key) || insideAvoid(x, y)) continue;
+    if (roadKeys.has(key) || solidKeys.has(key) || insideAvoid(x, y) || insideAnyRect(x, y, avoidRects)) continue;
     candidates.push({ x, y, d });
   }
   candidates.sort((a, b) => a.d - b.d);
@@ -207,6 +217,7 @@ function buildGeography(data: Geography, extent: number, restrained = false, cle
       const clipped = clipRoadToDisc(points[i-1], points[i], extent * 0.9);
       if (!clipped) continue;
       const [a, b] = clipped;
+      if (insideAnyRect((a.x + b.x) / 2, (a.y + b.y) / 2, avoidRects)) continue;
       const lift=(p:Point)=>2.7-(p.x*p.x+p.y*p.y)/(2*DISPLAY_RADIUS_METERS);
       roadPoints.push(a.x,lift(a),-a.y,b.x,lift(b),-b.y);
     }
@@ -252,7 +263,8 @@ function GeographicDistrict({ data, landmark, heading, displayCenter }: { data: 
   const extent = landmark === "oriental-pearl" || restrained ? 700 : gateway ? 380 : 500;
   const terrainExtent = extent + 30;
   const clearRadius = gateway ? 120 : restrained ? 110 : landmark === "eiffel" ? 70 : landmark === "elizabeth-tower" ? 60 : landmark === "wild-goose-pagoda" ? 70 : landmark === "canton-tower" || landmark === "taipei-101" || landmark === "bank-of-china-tower" ? 62 : landmark === "west-pearl-tower" ? 45 : 55;
-  const geometry = useMemo(() => buildGeography(data, extent, restrained, clearRadius), [data, extent, restrained, clearRadius]);
+  const avoidRects = useMemo(() => (landmark === "temple-of-heaven" ? [PALACE_AVOID] : []), [landmark]);
+  const geometry = useMemo(() => buildGeography(data, extent, restrained, clearRadius, avoidRects), [data, extent, restrained, clearRadius, avoidRects]);
   const materials = useMemo(() => ["#76839b","#8b96a8","#66748c","#9aa4b4"].map((color) => new THREE.MeshStandardMaterial({color, emissive:color, emissiveIntensity:0.05, roughness:0.95})), []);
   const waterMaterial = useMemo(()=>new THREE.MeshBasicMaterial({color:"#0d2b3d",depthTest:false,depthWrite:false,side:THREE.DoubleSide}),[]);
   const parkMaterial = useMemo(()=>new THREE.MeshBasicMaterial({color:"#2b4a41",depthTest:false,depthWrite:false,side:THREE.DoubleSide}),[]);
@@ -294,6 +306,13 @@ function GeographicDistrict({ data, landmark, heading, displayCenter }: { data: 
       <group position={[0,2,0]} rotation={[0,Math.PI-heading*Math.PI/180,0]} scale={restrained ? 6 : gateway ? 7.5 : landmark === "elizabeth-tower" ? 2.2 : landmark === "wild-goose-pagoda" ? 3 : 1}>
         <LandmarkModel kind={landmark}/>
       </group>
+      {landmark === "temple-of-heaven" && (
+        // Compressed Forbidden City compound north of the temple, on the axis.
+        // The y offset follows the terrain curvature so the walls sit on the ground.
+        <group position={[0, 2 - (360 * 360) / (2 * DISPLAY_RADIUS_METERS), -360]} scale={4}>
+          <LandmarkModel kind="hall-of-supreme-harmony" />
+        </group>
+      )}
     </group>
   );
 }
