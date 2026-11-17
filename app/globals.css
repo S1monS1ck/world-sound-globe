@@ -1623,3 +1623,40 @@ body,
   .sidebar { display: none; }
   .place-card { left: 20px; top: auto; bottom: 148px; width: min(360px, calc(100vw - 40px)); }
 }
+
+/* ===== Floating windows layout: nothing may dock over the globe ===== */
+.topbar {
+  top: 14px;
+  left: 30px;
+  right: 30px;
+  border: 1px solid var(--am-hairline);
+  border-radius: 16px;
+  padding: 10px 20px;
+  background: rgba(24, 24, 26, 0.62);
+}
+
+.place-card {
+  left: 30px;
+  top: auto;
+  bottom: 18px;
+  width: min(380px, calc(100vw - 60px));
+}
+
+.player-bar {
+  left: auto;
+  right: 30px;
+  bottom: 18px;
+  width: min(460px, calc(100vw - 390px));
+  min-width: 320px;
+  height: 66px;
+  border: 1px solid var(--am-hairline);
+  border-radius: 16px;
+  grid-template-columns: auto 1fr auto;
+  gap: 6px;
+  padding: 0 12px;
+}
+
+@media (max-width: 900px) {
+  .place-card { bottom: 148px; }
+  .player-bar { right: 20px; width: min(460px, calc(100vw - 40px)); }
+}

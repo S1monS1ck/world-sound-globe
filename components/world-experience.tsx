@@ -3,15 +3,12 @@
 import {
   ArrowLeft,
   ChevronRight,
-  Disc3,
   Globe2,
   Languages,
-  LayoutGrid,
   Maximize2,
   Minimize2,
   Pause,
   Play,
-  Radio,
   Search,
   SkipBack,
   SkipForward,
@@ -423,54 +420,45 @@ export function WorldExperience() {
       <div className="film-grain" aria-hidden="true" />
       <div className="edge-vignette" aria-hidden="true" />
 
-      <aside className="sidebar" aria-label={locale === "zh" ? "导航" : "Navigation"}>
-        <button className="sidebar-brand" type="button" onClick={returnToEarth}>
-          <strong>WORLD / SOUND</strong>
-          <small>{locale === "zh" ? "世界声音地图" : "An atlas of places & sound"}</small>
+      <header className="topbar">
+        <button className="brand" type="button" onClick={returnToEarth} aria-label={t.global}>
+          <span className="brand-mark"><span /></span>
+          <span>
+            <strong>WORLD / SOUND</strong>
+            <small>AN ATLAS OF PLACES & SOUND</small>
+          </span>
         </button>
 
-        <button className="sidebar-search" type="button" onClick={() => setSearchOpen(true)}>
-          <Search aria-hidden="true" />
-          <span>{t.navSearch}</span>
-        </button>
-
-        <p className="sidebar-section">{locale === "zh" ? "探索" : "Explore"}</p>
-        <button className={`sidebar-row ${selectedCity ? "" : "is-active"}`} type="button" onClick={returnToEarth}>
-          <Globe2 aria-hidden="true" />
-          <span>{t.global}</span>
-        </button>
-        <button className="sidebar-row" type="button" onClick={() => setSearchOpen(true)}>
-          <LayoutGrid aria-hidden="true" />
-          <span>{t.searchTitle}</span>
-          <small>{cities.length}</small>
-        </button>
-
-        <p className="sidebar-section">{locale === "zh" ? "收听模式" : "Listening mode"}</p>
-        <button className={`sidebar-row ${mode === "now" ? "is-active" : ""}`} type="button" onClick={() => setMode("now")}>
-          <Radio aria-hidden="true" />
-          <span>{t.now}</span>
-        </button>
-        <button className={`sidebar-row ${mode === "soul" ? "is-active" : ""}`} type="button" onClick={() => setMode("soul")}>
-          <Disc3 aria-hidden="true" />
-          <span>{t.soul}</span>
-        </button>
-
-        <div className="sidebar-foot">
-          <button className="sidebar-row" type="button" onClick={() => setLocale(locale === "zh" ? "en" : "zh")}>
-            <Languages aria-hidden="true" />
-            <span>{locale === "zh" ? "切换到 English" : "切换到中文"}</span>
+        <div className="mode-switch" role="group" aria-label={locale === "zh" ? "收听模式" : "Listening mode"}>
+          <button className={mode === "now" ? "active" : ""} onClick={() => setMode("now")} type="button">
+            <span>{t.now}</span>
+            <small>{t.nowDescription}</small>
           </button>
-          <button className="sidebar-row" type="button" onClick={toggleFullscreen}>
-            {fullscreen ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
-            <span>{locale === "zh" ? "全屏" : "Fullscreen"}</span>
+          <button className={mode === "soul" ? "active" : ""} onClick={() => setMode("soul")} type="button">
+            <span>{t.soul}</span>
+            <small>{t.soulDescription}</small>
           </button>
-          <p className="sidebar-clock">
-            <span className="live-dot" aria-hidden="true" />
-            {clock ? formatBeijingTime(locale, clock) : "--:--:--"}
-            <small>{t.live}</small>
-          </p>
         </div>
-      </aside>
+
+        <div className="top-actions">
+          <div className="earth-clock" title={locale === "zh" ? "北京时间" : "Beijing time"}>
+            <span className="live-dot" />
+            <span>{t.live}</span>
+            <strong>{clock ? formatBeijingTime(locale, clock) : "--:--:--"}</strong>
+          </div>
+          <button type="button" className="nav-search" onClick={() => setSearchOpen(true)}>
+            <Search aria-hidden="true" />
+            <span>{t.navSearch}</span>
+          </button>
+          <button type="button" className="icon-button language-button" onClick={() => setLocale(locale === "zh" ? "en" : "zh")} aria-label="Switch language">
+            <Languages aria-hidden="true" />
+            <span>{locale === "zh" ? "EN" : "中"}</span>
+          </button>
+          <button type="button" className="icon-button" onClick={toggleFullscreen} aria-label={fullscreen ? "Exit fullscreen" : "Enter fullscreen"}>
+            {fullscreen ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+          </button>
+        </div>
+      </header>
 
       <section className={`place-card ${selectedCity ? "is-visible" : ""}`} aria-live="polite">
         <div className="card-content" key={selectedCity?.id ?? "global"}>
