@@ -1070,3 +1070,88 @@ input:focus-visible {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ===== Liquid glass layer system ===== */
+/* Adapted from open-source recreations of Apple's iOS 26 material
+   (nikdelvin/liquid-glass, rdev/liquid-glass-react): a lower translucency
+   tint, inward edge refraction through an SVG displacement backdrop filter
+   (Chromium), inner highlight rings and a specular top edge. Engines without
+   backdrop-filter: url() keep their existing frosted treatment. */
+:root {
+  --glass-tint: rgba(8, 15, 19, 0.5);
+  --glass-tint-deep: rgba(5, 10, 14, 0.64);
+  --glass-hairline: rgba(255, 255, 255, 0.13);
+}
+
+.place-card,
+.place-card.is-visible,
+.music-info,
+.city-drawer,
+.player,
+.mode-switch {
+  border-color: var(--glass-hairline);
+  background: var(--glass-tint);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 0 26px rgba(255, 255, 255, 0.05),
+    0 24px 80px rgba(0, 0, 0, 0.38);
+}
+
+.city-drawer { background: var(--glass-tint-deep); }
+
+@supports (backdrop-filter: url("#liquid-glass-edge") blur(1px)) {
+  .place-card,
+  .music-info,
+  .city-drawer,
+  .player,
+  .mode-switch {
+    backdrop-filter: url("#liquid-glass-edge") blur(14px) saturate(175%) brightness(1.07);
+  }
+}
+
+/* Specular rim: a 1px gradient ring, brightest along the top-left curve. */
+.place-card::before,
+.music-info::before,
+.city-drawer::before,
+.player::before,
+.mode-switch::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.35),
+    rgba(255, 255, 255, 0.06) 38%,
+    rgba(255, 255, 255, 0) 60%,
+    rgba(255, 255, 255, 0.12)
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.mode-switch button.active {
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 0 0 1px rgba(231, 239, 234, 0.06);
+}
+
+.icon-button,
+.play-button {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 0 12px rgba(255, 255, 255, 0.05);
+}
+
+.icon-button:hover,
+.play-button:hover {
+  background: rgba(255, 255, 255, 0.13);
+}
