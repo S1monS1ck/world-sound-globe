@@ -747,6 +747,25 @@ input:focus-visible {
 .compact-preview-note { display: none; }
 .scene-detail { margin: 14px 0 0; color: #d7dedc; font-size: 10px; letter-spacing: .06em; }
 .scene-detail small { display: block; margin-top: 5px; color: var(--muted-copy); font-size: 8px; font-variant-numeric: tabular-nums; }
+.soundprint-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 12px 0 0;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #93a0a6;
+}
+.soundprint-meta span {
+  font-family: Georgia, "Songti SC", serif;
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--muted-copy);
+}
 .map-attribution { position: absolute; right: 28px; bottom: 116px; z-index: 40; color: #a7b4bc; font-size: 8px; text-decoration: none; text-shadow: 0 1px 4px #03070b; }
 .empty-results { padding: 24px 10px; color: var(--muted-copy); font-size: 12px; line-height: 1.8; }
 

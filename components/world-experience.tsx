@@ -17,6 +17,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type CSSProp
 import { cities, getCity, type City } from "@/lib/cities";
 import { getCityScene } from "@/lib/city-scenes";
 import { getCitySignature } from "@/lib/city-signatures";
+import { companionLandmarksFor, curatedFor } from "@/lib/curated";
 import { SceneErrorBoundary } from "@/components/scene-error-boundary";
 
 const WorldStage = lazy(() =>
@@ -51,6 +52,8 @@ const copy = {
     musicSource: "音源待接入",
     reset: "返回地球",
     cityMode: "城市频道",
+    soundprint: "声纹",
+    bpm: "BPM",
   },
   en: {
     title: "The world is sounding",
@@ -76,6 +79,8 @@ const copy = {
     musicSource: "Audio source pending",
     reset: "Return to earth",
     cityMode: "City channel",
+    soundprint: "SOUNDPRINT",
+    bpm: "BPM",
   },
 } as const;
 
@@ -149,6 +154,16 @@ export function WorldExperience() {
     };
   }, []);
 
+  // Persist the language choice across visits, same as the original prototype.
+  useEffect(() => {
+    document.documentElement.lang = locale === "zh" ? "zh-CN" : "en";
+    try {
+      window.localStorage.setItem("wsg:lang", locale);
+    } catch {
+      // Storage can be unavailable (private mode); the UI still works.
+    }
+  }, [locale]);
+
   useEffect(() => {
     if (!playing) return;
     const timer = window.setInterval(() => {
@@ -191,6 +206,21 @@ export function WorldExperience() {
     setPlaying(false);
     setProgress(0);
   }, []);
+
+  // Escape closes the topmost layer first: drawer, then the city focus.
+  useEffect(() => {
+    if (!entered) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (searchOpen) {
+        setSearchOpen(false);
+        return;
+      }
+      if (selectedId) returnToEarth();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [entered, searchOpen, selectedId, returnToEarth]);
 
   const toggleFullscreen = async () => {
     try {
@@ -301,8 +331,24 @@ export function WorldExperience() {
             <p className="city-character">
               {locale === "zh" ? selectedCity.characterZh : selectedCity.character}
             </p>
+            {curatedFor(selectedCity.id) && (
+              <p className="soundprint-meta">
+                {t.soundprint} {curatedFor(selectedCity.id)!.serial} · {curatedFor(selectedCity.id)!.bpm} {t.bpm}
+                <span>
+                  {(locale === "zh" ? curatedFor(selectedCity.id)!.keywordsZh : curatedFor(selectedCity.id)!.keywordsEn).join(" · ")}
+                </span>
+              </p>
+            )}
             <p className="scene-detail">
-              {selectedScene ? (locale === "zh" ? selectedScene.landmarkNameZh : selectedScene.landmarkName) : selectedSignature ? (locale === "zh" ? `${selectedSignature.nameZh} · 造型速写` : `${selectedSignature.name} · visual sketch`) : (locale === "zh" ? "城市建筑速写 · 风格化场景" : "Architectural sketch · stylized scene")}
+              {companionLandmarksFor(selectedCity.id).length > 0
+                ? companionLandmarksFor(selectedCity.id)
+                    .map((landmark) => (locale === "zh" ? landmark.nameZh : landmark.name))
+                    .join(" · ")
+                : selectedScene
+                  ? (locale === "zh" ? selectedScene.landmarkNameZh : selectedScene.landmarkName)
+                  : selectedSignature
+                    ? (locale === "zh" ? `${selectedSignature.nameZh} · 造型速写` : `${selectedSignature.name} · visual sketch`)
+                    : (locale === "zh" ? "城市建筑速写 · 风格化场景" : "Architectural sketch · stylized scene")}
               {selectedScene && <small>{selectedScene.lat.toFixed(5)}° / {selectedScene.lon.toFixed(5)}°</small>}
             </p>
           </>
