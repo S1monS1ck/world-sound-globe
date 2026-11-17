@@ -433,12 +433,16 @@ function StageContent({
       <OrbitControls
         ref={controlsRef}
         enableDamping
-        dampingFactor={0.065}
+        dampingFactor={0.08}
         enablePan={false}
+        // Ported from the original prototype: right-drag rotates, two fingers
+        // dolly and rotate together; pan stays disabled everywhere.
+        mouseButtons={{ LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE }}
+        touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_ROTATE }}
         minDistance={0.24}
         maxDistance={7.5}
         rotateSpeed={0.48}
-        zoomSpeed={0.62}
+        zoomSpeed={0.65}
       />
       <CameraRig selectedCity={selectedCity} controlsRef={controlsRef} reducedMotion={reducedMotion} />
     </>
