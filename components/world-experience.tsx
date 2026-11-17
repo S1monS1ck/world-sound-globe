@@ -280,6 +280,37 @@ export function WorldExperience() {
     audio.play().catch(() => setPlayState("error"));
   }, [mode, cityTracks, trackIndex]);
 
+  // Track rows in the notes window start playback in place instead of
+  // opening Apple Music; the small chevron link still offers the full song.
+  const pendingTrackRef = useRef<number | null>(null);
+  const playTrackAt = useCallback((index: number) => {
+    const audio = audioRef.current;
+    if (!audio || mode !== "soul" || !cityTracks[index]) return;
+    setTrackIndex(index);
+    audio.src = cityTracks[index].previewUrl;
+    setPlayState("loading");
+    audio.play().catch(() => setPlayState("error"));
+  }, [mode, cityTracks]);
+
+  // A track clicked while the radio mode is active first switches modes; the
+  // transport-reset effect fires on that change, so the actual start must be
+  // deferred until after it has cleared the transport.
+  useEffect(() => {
+    if (mode !== "soul" || pendingTrackRef.current === null) return;
+    const index = pendingTrackRef.current;
+    pendingTrackRef.current = null;
+    playTrackAt(index);
+  }, [mode, playTrackAt]);
+
+  const handleTrackClick = useCallback((index: number) => {
+    if (mode === "soul") {
+      playTrackAt(index);
+      return;
+    }
+    pendingTrackRef.current = index;
+    setMode("soul");
+  }, [mode, playTrackAt]);
+
   // Fetch the Apple Music track notes whenever the selected city changes.
   useEffect(() => {
     if (!selectedCity) {
@@ -698,23 +729,39 @@ export function WorldExperience() {
             <p className="music-info-empty">{t.noTrackInfo}</p>
           ) : (
             <div className="music-track-list">
-              {cityTracks.map((track, index) => (
-                <a
-                  className="music-track"
-                  key={`${track.title}-${index}`}
-                  href={track.appleMusicUrl ?? "#"}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {track.artworkUrl && <img src={track.artworkUrl} alt="" width={52} height={52} loading="lazy" />}
-                  <span className="music-track-meta">
-                    <strong>{index + 1}. {track.title}</strong>
-                    <span>{track.artist}</span>
-                    <small>{[track.album, track.year, track.duration, track.genre].filter(Boolean).join(" · ")}</small>
-                  </span>
-                  <ChevronRight aria-hidden="true" />
-                </a>
-              ))}
+              {cityTracks.map((track, index) => {
+                const active =
+                  mode === "soul" &&
+                  index === trackIndex &&
+                  (playState === "playing" || playState === "loading");
+                return (
+                  <div className="music-track" key={`${track.title}-${index}`}>
+                    <button
+                      type="button"
+                      className={"music-track-play" + (active ? " is-active" : "")}
+                      onClick={() => handleTrackClick(index)}
+                      aria-label={locale === "zh" ? `播放 ${track.title}` : `Play ${track.title}`}
+                    >
+                      {track.artworkUrl && <img src={track.artworkUrl} alt="" width={52} height={52} loading="lazy" />}
+                      <span className="music-track-meta">
+                        <strong>{index + 1}. {track.title}</strong>
+                        <span>{track.artist}</span>
+                        <small>{[track.album, track.year, track.duration, track.genre].filter(Boolean).join(" · ")}</small>
+                      </span>
+                      {active ? <Pause aria-hidden="true" /> : <Play aria-hidden="true" />}
+                    </button>
+                    <a
+                      className="music-track-link"
+                      href={track.appleMusicUrl ?? "#"}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={locale === "zh" ? "在 Apple Music 打开" : "Open in Apple Music"}
+                    >
+                      <ChevronRight aria-hidden="true" />
+                    </a>
+                  </div>
+                );
+              })}
             </div>
           )}
           <p className="music-info-foot">

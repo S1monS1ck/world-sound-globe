@@ -1794,3 +1794,33 @@ body,
     backdrop-filter: url("#liquid-glass-edge") blur(18px) saturate(190%) brightness(1.09);
   }
 }
+
+/* Track rows in the notes window play the 30s preview in place; the small
+   chevron at the end remains the way out to the full song on Apple Music. */
+.music-track button.music-track-play {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 8px 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+.music-track button.music-track-play img {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+.music-track button.music-track-play > svg { flex: none; width: 16px; height: 16px; color: #a7b4bc; transition: color 180ms ease; }
+.music-track button.music-track-play:hover > svg,
+.music-track button.music-track-play.is-active > svg { color: var(--am-accent); }
+.music-track button.music-track-play.is-active strong { color: var(--am-accent); }
+.music-track-link { flex: none; display: inline-flex; align-items: center; padding: 8px 0 8px 10px; }
+.music-track-link svg { width: 14px; height: 14px; }
