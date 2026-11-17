@@ -1249,3 +1249,153 @@ body,
 /* Brand keeps its spaced-caps look but on the system family. */
 .brand strong { font-family: var(--sans); font-weight: 700; }
 .brand small { font-family: var(--sans); }
+
+/* ===== Apple Music now playing view ===== */
+.now-playing {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: card-in 380ms cubic-bezier(.2,.75,.2,1) both;
+}
+
+.np-backdrop {
+  position: absolute;
+  inset: -12%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(58px) saturate(1.55) brightness(0.5);
+  transform: scale(1.25);
+}
+
+.np-close { position: absolute; top: 26px; right: 30px; }
+
+.np-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  width: min(360px, 86vw);
+  text-align: center;
+}
+
+.np-art {
+  width: min(300px, 62vw);
+  aspect-ratio: 1;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow:
+    0 34px 90px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.np-art img { width: 100%; height: 100%; object-fit: cover; }
+
+.np-art-live {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(90% 70% at 50% 22%, var(--city-accent, #8caab3) 0%, rgba(4, 8, 12, 0.4) 74%),
+    #060c11;
+}
+
+.np-art-live span {
+  font-family: var(--sans);
+  font-size: 72px;
+  font-weight: 200;
+  letter-spacing: -0.03em;
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.np-meta { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.np-meta h2 { font-family: var(--sans); font-size: 24px; font-weight: 700; letter-spacing: -0.02em; color: #f2f5f1; }
+.np-meta p { font-family: var(--sans); font-size: 14px; color: var(--secondary-copy); }
+
+.np-live-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: #ff453a;
+  vertical-align: 1px;
+  animation: np-live 1.6s ease-in-out infinite;
+}
+
+@keyframes np-live { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+.np-progress {
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+.np-progress span { display: block; height: 100%; border-radius: inherit; background: #f2f5f1; transition: width 320ms linear; }
+
+.np-play {
+  width: 58px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(242, 245, 241, 0.92);
+  color: #0a1114;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  transition: transform 180ms ease, background 180ms ease;
+}
+
+.np-play:hover { transform: scale(1.05); background: #f2f5f1; }
+.np-play:disabled { opacity: 0.45; cursor: default; transform: none; }
+.np-play svg { width: 20px; height: 20px; }
+
+.record-art { cursor: pointer; }
+
+/* ===== Apple Music navigation bar ===== */
+.topbar {
+  background: rgba(5, 10, 14, 0.4);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 12px 28px;
+}
+
+.nav-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  color: var(--secondary-copy);
+  font-family: var(--sans);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease;
+}
+
+.nav-search:hover { background: rgba(255, 255, 255, 0.14); color: #e7ebe6; }
+.nav-search svg { width: 13px; height: 13px; }
+
+.mode-switch { border-radius: 10px; padding: 2px; background: rgba(0, 0, 0, 0.3); }
+.mode-switch button { border-radius: 8px; }
+
+.mode-switch button.active {
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+}

@@ -69,6 +69,9 @@ const copy = {
     appleSource: "官方试听 · Apple Music",
     playAudio: "播放",
     stopAudio: "停止",
+    navSearch: "搜索",
+    nowPlaying: "正在播放",
+    liveBadge: "直播中",
   },
   en: {
     title: "The world is sounding",
@@ -106,6 +109,9 @@ const copy = {
     appleSource: "Official preview · Apple Music",
     playAudio: "Play",
     stopAudio: "Stop",
+    navSearch: "Search",
+    nowPlaying: "Now playing",
+    liveBadge: "Live",
   },
 } as const;
 
@@ -159,6 +165,8 @@ export function WorldExperience() {
   const [radio, setRadio] = useState<RadioResponse | null>(null);
   const [trackIndex, setTrackIndex] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Apple Music style full-screen now playing view.
+  const [nowPlayingOpen, setNowPlayingOpen] = useState(false);
   const [clock, setClock] = useState<Date | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -320,7 +328,11 @@ export function WorldExperience() {
     if (!entered) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      // Escape closes the topmost layer first: music notes, drawer, city focus.
+      // Escape closes the topmost layer: now playing, notes, drawer, city focus.
+      if (nowPlayingOpen) {
+        setNowPlayingOpen(false);
+        return;
+      }
       if (musicInfoOpen) {
         setMusicInfoOpen(false);
         return;
@@ -333,7 +345,7 @@ export function WorldExperience() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [entered, musicInfoOpen, searchOpen, selectedId, returnToEarth, closeSearch]);
+  }, [entered, nowPlayingOpen, musicInfoOpen, searchOpen, selectedId, returnToEarth, closeSearch]);
 
   const toggleFullscreen = async () => {
     try {
@@ -415,8 +427,9 @@ export function WorldExperience() {
             <span>{t.live}</span>
             <strong>{clock ? formatBeijingTime(locale, clock) : "--:--:--"}</strong>
           </div>
-          <button type="button" className="icon-button" onClick={() => setSearchOpen(true)} aria-label={t.explore}>
+          <button type="button" className="nav-search" onClick={() => setSearchOpen(true)}>
             <Search aria-hidden="true" />
+            <span>{t.navSearch}</span>
           </button>
           <button type="button" className="icon-button language-button" onClick={() => setLocale(locale === "zh" ? "en" : "zh")} aria-label="Switch language">
             <Languages aria-hidden="true" />
@@ -500,7 +513,17 @@ export function WorldExperience() {
       {selectedScene && <a className="map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>}
 
       <section className="player" aria-label={locale === "zh" ? "播放器" : "Player"}>
-        <div className={`record-art ${playState === "playing" ? "spinning" : ""}`} style={{ "--city-accent": selectedCity?.accent ?? "#8caab3" } as CSSProperties}>
+        <div
+          className={`record-art ${playState === "playing" ? "spinning" : ""}`}
+          style={{ "--city-accent": selectedCity?.accent ?? "#8caab3" } as CSSProperties}
+          role="button"
+          tabIndex={0}
+          onClick={() => selectedCity && setNowPlayingOpen(true)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") setNowPlayingOpen(true);
+          }}
+          aria-label={t.nowPlaying}
+        >
           <span />
         </div>
         <div className="track-meta">
@@ -588,6 +611,63 @@ export function WorldExperience() {
           <Info aria-hidden="true" />
         </button>
       </section>
+
+      {nowPlayingOpen && selectedCity && (
+        <section className="now-playing" role="dialog" aria-modal="true" aria-label={t.nowPlaying}>
+          <div
+            className="np-backdrop"
+            aria-hidden="true"
+            style={
+              mode === "soul" && cityTracks[trackIndex]?.artworkUrl
+                ? { backgroundImage: `url(${cityTracks[trackIndex].artworkUrl})` }
+                : { background: `radial-gradient(120% 90% at 50% 12%, ${selectedCity.accent}30 0%, #04080c 68%)` }
+            }
+          />
+          <button type="button" className="icon-button np-close" onClick={() => setNowPlayingOpen(false)} aria-label="Close">
+            <X aria-hidden="true" />
+          </button>
+          <div className="np-stage">
+            <div className="np-art">
+              {mode === "soul" && cityTracks[trackIndex]?.artworkUrl ? (
+                <img src={cityTracks[trackIndex].artworkUrl} alt="" />
+              ) : (
+                <div className="np-art-live" style={{ "--city-accent": selectedCity.accent } as CSSProperties}>
+                  <span>{selectedCity.localName.slice(0, 2)}</span>
+                </div>
+              )}
+            </div>
+            <div className="np-meta">
+              <p className="eyebrow">
+                {mode === "now" && playState === "playing" && <span className="np-live-dot" aria-hidden="true" />}
+                {mode === "now" ? t.liveLabel : t.appleSource}
+                {mode === "now" && radio ? ` · ${locale === "zh" ? selectedCity.nameZh : selectedCity.name}` : ""}
+              </p>
+              <h2>{track.title}</h2>
+              <p>{track.artist}</p>
+            </div>
+            {mode === "soul" && (
+              <div className="np-progress" aria-hidden="true">
+                <span style={{ width: `${progress}%` }} />
+              </div>
+            )}
+            <button
+              type="button"
+              className="np-play"
+              onClick={togglePlay}
+              disabled={playState !== "playing" && !currentAudioSrc}
+              aria-label={playState === "playing" ? t.stopAudio : t.playAudio}
+            >
+              {playState === "loading" ? (
+                <Loader2 className="spin-icon" aria-hidden="true" />
+              ) : playState === "playing" ? (
+                <Pause fill="currentColor" aria-hidden="true" />
+              ) : (
+                <Play fill="currentColor" aria-hidden="true" />
+              )}
+            </button>
+          </div>
+        </section>
+      )}
 
       {musicInfoOpen && (
         <section className="music-info" role="dialog" aria-label={t.musicNotes}>
