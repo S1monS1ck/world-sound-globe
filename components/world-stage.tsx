@@ -210,7 +210,7 @@ function CityNode({
 
 function CityMarkers({ cities, onSelect, onHover }: {
   cities: City[];
-  onSelect: (id: string) => void;
+  onSelect: (id: string, quick?: boolean) => void;
   onHover: (city: City | null) => void;
 }) {
   const { camera, gl } = useThree();
@@ -221,6 +221,11 @@ function CityMarkers({ cities, onSelect, onHover }: {
   const current = useRef<City | null>(null);
   useEffect(() => {
     const canvas = gl.domElement;
+    // A double click skips the long cinematic flight and snaps to the city.
+    function doubleClick(e: MouseEvent) {
+      const city = pickCity(markers, camera, canvas.getBoundingClientRect(), e.clientX, e.clientY, false);
+      if (city) onSelect(city.id, true);
+    }
     function hover(city: City | null) {
       if (city === current.current) return;
       current.current = city;
@@ -229,9 +234,11 @@ function CityMarkers({ cities, onSelect, onHover }: {
       onHover(city);
     }
     const unbind = bindCityPicking(canvas, e => pickCity(markers, camera, canvas.getBoundingClientRect(),
-      e.clientX, e.clientY, e.pointerType === "touch"), hover, onSelect);
+      e.clientX, e.clientY, e.pointerType === "touch"), hover, id => onSelect(id));
+    canvas.addEventListener("dblclick", doubleClick);
     return () => {
       unbind();
+      canvas.removeEventListener("dblclick", doubleClick);
       canvas.style.cursor = "";
       current.current = null;
       onHover(null);
@@ -259,10 +266,14 @@ function CameraRig({
   selectedCity,
   controlsRef,
   reducedMotion,
+  quickFocus,
+  onAutoReturn,
 }: {
   selectedCity: City | null;
   controlsRef: RefObject<ComponentRef<typeof OrbitControls> | null>;
   reducedMotion: boolean;
+  quickFocus: boolean;
+  onAutoReturn: () => void;
 }) {
   const { camera, size, invalidate } = useThree();
   const startPosition = useRef(camera.position.clone());
@@ -273,6 +284,10 @@ function CameraRig({
   const endUp = useRef(new THREE.Vector3(0, 1, 0));
   const progress = useRef(1);
   const firstRun = useRef(true);
+  // Armed once a city flight has settled; zooming out past the threshold then
+  // hands the view back to the globe instead of fighting the user's intent.
+  const autoReturnArmed = useRef(false);
+  const AUTO_RETURN_DISTANCE = 2.0;
   const scene = selectedCity ? getCityScene(selectedCity.id) : undefined;
   const signature = selectedCity ? getCitySignature(selectedCity.id) : undefined;
   const visualAnchor = useMemo(() => selectedCity ? getCityVisualAnchor(selectedCity) : undefined, [selectedCity]);
@@ -338,7 +353,10 @@ function CameraRig({
     motion.arc.setFromUnitVectors(startDirection, endDirection);
     motion.upArc.setFromUnitVectors(startUp.current, endUp.current);
     motion.lift = angle * 0.35;
-    motion.duration = selectedCity ? 3.2 + angle * 0.35 : 1.7 + angle * 0.35;
+    // Double click skips most of the cinematic flight.
+    motion.duration = (selectedCity ? 3.2 + angle * 0.35 : 1.7 + angle * 0.35)
+      * (quickFocus && selectedCity ? 0.35 : 1);
+    autoReturnArmed.current = false;
     if (firstRun.current || reducedMotion) {
       camera.position.copy(endPosition.current);
       camera.up.copy(endUp.current);
@@ -359,7 +377,7 @@ function CameraRig({
       progress.current = 0;
     }
     invalidate();
-  }, [camera, controlsRef, selectedCity, size.width, reducedMotion, invalidate, motion, scene, signature, visualAnchor, minimumDistance, maximumDistance]);
+  }, [camera, controlsRef, selectedCity, size.width, reducedMotion, invalidate, motion, scene, signature, visualAnchor, minimumDistance, maximumDistance, quickFocus, onAutoReturn]);
 
   useFrame((_, delta) => {
     const target = controlsRef.current?.target ?? motion.lookAt;
@@ -368,7 +386,15 @@ function CameraRig({
       camera.near = near;
       camera.updateProjectionMatrix();
     }
-    if (progress.current >= 1) return;
+    if (selectedCity && autoReturnArmed.current && camera.position.distanceTo(target) > AUTO_RETURN_DISTANCE) {
+      autoReturnArmed.current = false;
+      onAutoReturn();
+      return;
+    }
+    if (progress.current >= 1) {
+      if (selectedCity) autoReturnArmed.current = true;
+      return;
+    }
     progress.current = Math.min(1, progress.current + delta / motion.duration);
     const t = progress.current;
     const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
@@ -409,12 +435,16 @@ function StageContent({
   onSelect,
   onHover,
   reducedMotion,
+  quickFocus,
+  onAutoReturn,
 }: {
   cities: City[];
   selectedCity: City | null;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, quick?: boolean) => void;
   onHover: (city: City | null) => void;
   reducedMotion: boolean;
+  quickFocus: boolean;
+  onAutoReturn: () => void;
 }) {
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null);
   return (
@@ -444,7 +474,7 @@ function StageContent({
         rotateSpeed={0.48}
         zoomSpeed={0.65}
       />
-      <CameraRig selectedCity={selectedCity} controlsRef={controlsRef} reducedMotion={reducedMotion} />
+      <CameraRig selectedCity={selectedCity} controlsRef={controlsRef} reducedMotion={reducedMotion} quickFocus={quickFocus} onAutoReturn={onAutoReturn} />
     </>
   );
 }
@@ -456,13 +486,17 @@ export function WorldStage({
   onHover,
   reducedMotion,
   active,
+  quickFocus,
+  onAutoReturn,
 }: {
   cities: City[];
   selectedCity: City | null;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, quick?: boolean) => void;
   onHover: (city: City | null) => void;
   reducedMotion: boolean;
   active: boolean;
+  quickFocus: boolean;
+  onAutoReturn: () => void;
 }) {
   return (
     <Canvas
@@ -484,6 +518,8 @@ export function WorldStage({
           onSelect={onSelect}
           onHover={onHover}
           reducedMotion={reducedMotion}
+          quickFocus={quickFocus}
+          onAutoReturn={onAutoReturn}
         />
       </Suspense>
     </Canvas>

@@ -117,6 +117,8 @@ export function WorldExperience() {
   const [mode, setMode] = useState<ListeningMode>("now");
   const [entered, setEntered] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Double click asks for the fast camera flight instead of the cinematic one.
+  const [quickFocus, setQuickFocus] = useState(false);
   const [hoveredCity, setHoveredCity] = useState<City | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   // Delayed unmount lets the drawer play its exit animation before removal.
@@ -203,8 +205,9 @@ export function WorldExperience() {
     }, 280);
   }, [searchClosing]);
 
-  const selectCity = useCallback((id: string) => {
+  const selectCity = useCallback((id: string, quick = false) => {
     setSelectedId(id);
+    setQuickFocus(quick);
     setHoveredCity(null);
     closeSearch();
     setQuery("");
@@ -213,6 +216,7 @@ export function WorldExperience() {
 
   const returnToEarth = useCallback(() => {
     setSelectedId(null);
+    setQuickFocus(false);
     setHoveredCity(null);
     setPlaying(false);
     setProgress(0);
@@ -270,6 +274,8 @@ export function WorldExperience() {
                 onHover={setHoveredCity}
                 reducedMotion={reducedMotion}
                 active={entered}
+                quickFocus={quickFocus}
+                onAutoReturn={returnToEarth}
               />
             </Suspense>
           </SceneErrorBoundary>
