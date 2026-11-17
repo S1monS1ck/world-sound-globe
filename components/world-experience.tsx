@@ -681,7 +681,15 @@ export function WorldExperience() {
       {musicInfoOpen && (
         <section className="music-info" role="dialog" aria-label={t.musicNotes}>
           <div className="music-info-head">
-            <p className="eyebrow">{t.musicNotes}</p>
+            <div className="music-info-title">
+              <p className="eyebrow">{t.musicNotes}</p>
+              {selectedCity && (
+                <p className="music-city-line">
+                  <strong>{cityDisplayName(selectedCity, locale)}</strong>
+                  <span>{locale === "zh" ? selectedCity.soundZh : selectedCity.sound}</span>
+                </p>
+              )}
+            </div>
             <button type="button" className="icon-button" onClick={() => setMusicInfoOpen(false)} aria-label="Close">
               <X aria-hidden="true" />
             </button>
@@ -689,22 +697,31 @@ export function WorldExperience() {
           {cityTracks.length === 0 ? (
             <p className="music-info-empty">{t.noTrackInfo}</p>
           ) : (
-            cityTracks.map((track, index) => (
-              <div className="music-track" key={`${track.title}-${index}`}>
-                {track.artworkUrl && <img src={track.artworkUrl} alt="" width={44} height={44} loading="lazy" />}
-                <div className="music-track-meta">
-                  <strong>{track.title}</strong>
-                  <span>{track.artist}</span>
-                  <small>{[track.album, track.genre, track.year].filter(Boolean).join(" · ")}</small>
-                </div>
-                {track.appleMusicUrl && (
-                  <a href={track.appleMusicUrl} target="_blank" rel="noreferrer" aria-label="Apple Music">
-                    <ChevronRight aria-hidden="true" />
-                  </a>
-                )}
-              </div>
-            ))
+            <div className="music-track-list">
+              {cityTracks.map((track, index) => (
+                <a
+                  className="music-track"
+                  key={`${track.title}-${index}`}
+                  href={track.appleMusicUrl ?? "#"}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {track.artworkUrl && <img src={track.artworkUrl} alt="" width={52} height={52} loading="lazy" />}
+                  <span className="music-track-meta">
+                    <strong>{index + 1}. {track.title}</strong>
+                    <span>{track.artist}</span>
+                    <small>{[track.album, track.year, track.duration, track.genre].filter(Boolean).join(" · ")}</small>
+                  </span>
+                  <ChevronRight aria-hidden="true" />
+                </a>
+              ))}
+            </div>
           )}
+          <p className="music-info-foot">
+            {locale === "zh"
+              ? "数据来自 Apple Music · 曲目为官方 30 秒试听"
+              : "Data from Apple Music · official 30-second previews"}
+          </p>
         </section>
       )}
 

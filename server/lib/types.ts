@@ -14,6 +14,8 @@ export type PreviewTrack = {
   album?: string;
   genre?: string;
   year?: string;
+  duration?: string;
+  copyright?: string;
   appleMusicUrl?: string;
 };
 

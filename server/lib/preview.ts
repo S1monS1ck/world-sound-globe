@@ -12,19 +12,26 @@ type ITunesResult = {
   collectionName?: string;
   primaryGenreName?: string;
   releaseDate?: string;
+  trackTimeMillis?: number;
+  copyright?: string;
   trackViewUrl?: string;
 };
 
 type ITunesResponse = { results?: ITunesResult[] };
 
 const CACHE_TTL_MS = 60 * 60 * 1000;
-const TRACKS_PER_CITY = 3;
+const TRACKS_PER_CITY = 5;
 const cache = new Map<string, { response: PreviewResponse; expires: number }>();
 
 // The city's curated sound tags ("Mandopop · Rock · Indie") carry the local
 // flavour; the first tag keeps a single upstream call per city.
 function searchTermFor(city: City) {
   return city.sound.split("·")[0]?.trim() || city.name;
+}
+
+function formatDuration(ms: number) {
+  const total = Math.round(ms / 1000);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }
 
 function toTrack(result: ITunesResult): PreviewTrack | null {
@@ -38,6 +45,8 @@ function toTrack(result: ITunesResult): PreviewTrack | null {
     album: result.collectionName,
     genre: result.primaryGenreName,
     year: result.releaseDate?.slice(0, 4),
+    duration: result.trackTimeMillis ? formatDuration(result.trackTimeMillis) : undefined,
+    copyright: result.copyright,
     appleMusicUrl: result.trackViewUrl,
   };
 }

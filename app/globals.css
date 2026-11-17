@@ -1713,3 +1713,84 @@ body,
 .nav-search { height: 32px; border-radius: 8px; }
 .icon-button { width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; }
 .icon-button svg { width: 14px; height: 14px; }
+
+/* ===== Music notes window: readable, layered ===== */
+.music-info { padding: 16px 16px 11px; border-radius: 18px; }
+.music-info-title { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.music-city-line { display: flex; align-items: baseline; gap: 8px; }
+.music-city-line strong { font-family: var(--sans); font-size: 16px; font-weight: 700; letter-spacing: -0.02em; color: var(--am-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.music-city-line span { font-family: var(--sans); font-size: 11.5px; color: var(--am-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.music-track-list { display: flex; flex-direction: column; margin-top: 8px; }
+.music-track {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  margin: 0 -8px;
+  border-top: 0;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: background 150ms ease;
+}
+.music-track:hover { background: rgba(255, 255, 255, 0.07); }
+.music-track img { width: 52px; height: 52px; border-radius: 9px; object-fit: cover; }
+.music-track-meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.music-track-meta strong { font-family: var(--sans); font-size: 13px; font-weight: 600; letter-spacing: -0.01em; color: #f2f5f1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.music-track-meta span { font-family: var(--sans); font-size: 12px; color: var(--am-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.music-track-meta small { font-family: var(--sans); font-size: 10.5px; color: rgba(245, 245, 247, 0.45); letter-spacing: 0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.music-track > svg { width: 14px; height: 14px; color: rgba(245, 245, 247, 0.35); flex: none; }
+.music-info-foot {
+  margin: 8px 0 2px;
+  padding-top: 9px;
+  border-top: 1px solid var(--am-hairline);
+  font-family: var(--sans);
+  font-size: 9.5px;
+  color: rgba(245, 245, 247, 0.42);
+}
+
+/* ===== Liquid glass depth: sheen film + inner ring + taller elevation ===== */
+/* The single flat sheet read as shallow; these layers give the material its
+   two-plane look: a curved sheen over the surface and stacked shadows. */
+.place-card::after,
+.music-info::after,
+.city-drawer::after,
+.player-bar::after,
+.topbar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.11),
+    rgba(255, 255, 255, 0.03) 34%,
+    rgba(255, 255, 255, 0) 58%,
+    rgba(255, 255, 255, 0.05)
+  );
+  pointer-events: none;
+}
+
+.place-card,
+.music-info,
+.city-drawer,
+.player-bar,
+.topbar {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 0 30px rgba(255, 255, 255, 0.05),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 28px 90px rgba(0, 0, 0, 0.45);
+}
+
+@supports (backdrop-filter: url("#liquid-glass-edge") blur(1px)) {
+  .place-card,
+  .place-card.is-visible,
+  .music-info,
+  .city-drawer,
+  .player-bar,
+  .topbar {
+    backdrop-filter: url("#liquid-glass-edge") blur(18px) saturate(190%) brightness(1.09);
+  }
+}
