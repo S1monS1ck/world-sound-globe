@@ -1,6 +1,10 @@
 // iTunes Search API preview lookup. Free, keyless, rate limited to roughly
 // 20 calls/minute — hence the per-city result cache with a 1 hour TTL.
+// Candidates are screened against lrclib.net (free, keyless lyrics) so a
+// track only enters the queue when its lyrics actually mention the city —
+// a title containing "Beijing" alone does not make a song about Beijing.
 // https://performance-partners.apple.com/search-api
+// https://lrclib.net/docs
 import { cities, type City } from "@/lib/cities";
 import type { PreviewResponse, PreviewTrack } from "./types";
 
@@ -21,7 +25,14 @@ type ITunesResponse = { results?: ITunesResult[] };
 
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const TRACKS_PER_CITY = 5;
+// Candidate tracks screened against lyrics per search term — more than the
+// per-term quota so filtering still leaves enough to fill the quota.
+const LYRICS_CHECK_LIMIT = 8;
+// lrclib asks callers to identify themselves; no key required.
+const LRCLIB_HEADERS = { "User-Agent": "WorldSoundGlobe/0.1 (competition prototype)" };
 const cache = new Map<string, { response: PreviewResponse; expires: number }>();
+// Lyrics lookups are shared across cities and never change; cache forever.
+const lyricsCache = new Map<string, string | null>();
 
 function formatDuration(ms: number) {
   const total = Math.round(ms / 1000);
@@ -47,6 +58,61 @@ function toTrack(result: ITunesResult): PreviewTrack | null {
 
 function trackKey(track: PreviewTrack) {
   return `${track.title.toLowerCase()}|${track.artist.toLowerCase()}`;
+}
+
+// Live/remastered suffixes break exact lookups, so try the stripped title too.
+function cleanTitle(title: string) {
+  return title.replace(/\s*[（(].*?[)）]\s*/g, " ").trim();
+}
+
+async function fetchLyrics(artist: string, title: string): Promise<string | null> {
+  const key = `${artist.toLowerCase()}|${title.toLowerCase()}`;
+  const cached = lyricsCache.get(key);
+  if (cached !== undefined) return cached;
+  let lyrics: string | null = null;
+  for (const name of [...new Set([title, cleanTitle(title)])]) {
+    const params = new URLSearchParams({ artist_name: artist, track_name: name });
+    try {
+      const response = await fetch(`https://lrclib.net/api/get?${params}`, {
+        headers: LRCLIB_HEADERS,
+        signal: AbortSignal.timeout(6000),
+      });
+      if (response.ok) {
+        const data = (await response.json()) as { plainLyrics?: string | null };
+        if (data.plainLyrics) {
+          lyrics = data.plainLyrics;
+          break;
+        }
+      }
+    } catch {
+      // Timeout or network error: treat as missing lyrics, not a hard failure.
+    }
+  }
+  lyricsCache.set(key, lyrics);
+  return lyrics;
+}
+
+function escapeRegExp(text: string) {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+// The city counts as mentioned when the lyrics contain the local name
+// (substring is enough for CJK) or the English name as a whole word, so
+// "Beijing" does not match inside unrelated words.
+function lyricsMentionCity(lyrics: string, city: City): boolean {
+  const text = lyrics.toLowerCase();
+  if (city.nameZh && text.includes(city.nameZh)) return true;
+  if (!city.name) return false;
+  return new RegExp(`\\b${escapeRegExp(city.name.toLowerCase())}\\b`).test(text);
+}
+
+// Runs lookups with bounded concurrency to stay polite to lrclib.
+async function mapWithLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>) {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += limit) {
+    results.push(...(await Promise.all(items.slice(i, i + limit).map(fn))));
+  }
+  return results;
 }
 
 async function searchSongs(
@@ -99,8 +165,22 @@ export async function getCityPreviews(cityId: string, city: City): Promise<Previ
     for (const term of terms) {
       if (tracks.length >= TRACKS_PER_CITY) break;
       const found = await searchSongs(term, seen, seenArtists);
+      // Screen candidates: a song counts as city-related when its lyrics
+      // mention the city. Verified tracks fill the quota first; the rest
+      // stay as backfill so catalogs that lrclib cannot index stay audible.
+      const candidates = found.slice(0, LYRICS_CHECK_LIMIT);
+      const lyrics = await mapWithLimit(candidates, 4, (track) =>
+        fetchLyrics(track.artist, track.title),
+      );
+      const verified: PreviewTrack[] = [];
+      const unverified: PreviewTrack[] = [];
+      candidates.forEach((track, i) => {
+        (lyrics[i] !== null && lyricsMentionCity(lyrics[i]!, city) ? verified : unverified).push(
+          track,
+        );
+      });
       let taken = 0;
-      for (const track of found) {
+      for (const track of [...verified, ...unverified]) {
         // Cap each name's share so both the international and the home-town
         // catalogue are represented instead of five identical titles.
         if (taken >= perTerm || tracks.length >= TRACKS_PER_CITY) break;
