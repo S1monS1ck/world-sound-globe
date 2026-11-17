@@ -15,10 +15,12 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import dynamic from "next/dynamic";
+import { Info } from "lucide-react";
 import { cities, getCity, type City } from "@/lib/cities";
 import { getCityScene } from "@/lib/city-scenes";
 import { getCitySignature } from "@/lib/city-signatures";
 import { companionLandmarksFor, curatedFor } from "@/lib/curated";
+import type { PreviewTrack } from "@/server/lib/types";
 import { SceneErrorBoundary } from "@/components/scene-error-boundary";
 
 // WebGL only exists in the browser: keep the 3D stage out of server rendering.
@@ -57,6 +59,8 @@ const copy = {
     cityMode: "城市频道",
     soundprint: "声纹",
     bpm: "BPM",
+    musicNotes: "音乐介绍 · APPLE MUSIC",
+    noTrackInfo: "这座城市暂无曲目信息。",
   },
   en: {
     title: "The world is sounding",
@@ -84,6 +88,8 @@ const copy = {
     cityMode: "City channel",
     soundprint: "SOUNDPRINT",
     bpm: "BPM",
+    musicNotes: "MUSIC NOTES · APPLE MUSIC",
+    noTrackInfo: "No track info for this city yet.",
   },
 } as const;
 
@@ -122,6 +128,9 @@ export function WorldExperience() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // Double click asks for the fast camera flight instead of the cinematic one.
   const [quickFocus, setQuickFocus] = useState(false);
+  // Apple Music track notes for the selected city, served by /api/preview.
+  const [cityTracks, setCityTracks] = useState<PreviewTrack[]>([]);
+  const [musicInfoOpen, setMusicInfoOpen] = useState(false);
   const [hoveredCity, setHoveredCity] = useState<City | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   // Delayed unmount lets the drawer play its exit animation before removal.
@@ -179,6 +188,26 @@ export function WorldExperience() {
     return () => window.clearInterval(timer);
   }, [playing]);
 
+  // Fetch the Apple Music track notes whenever the selected city changes.
+  useEffect(() => {
+    if (!selectedCity) {
+      setCityTracks([]);
+      return;
+    }
+    let current = true;
+    fetch(`/api/preview?city=${selectedCity.id}`)
+      .then((response) => (response.ok ? (response.json() as Promise<{ tracks?: PreviewTrack[] }>) : { tracks: [] }))
+      .then((data: { tracks?: PreviewTrack[] }) => {
+        if (current) setCityTracks(data.tracks ?? []);
+      })
+      .catch(() => {
+        if (current) setCityTracks([]);
+      });
+    return () => {
+      current = false;
+    };
+  }, [selectedCity]);
+
   const filteredCities = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return cities;
@@ -230,6 +259,11 @@ export function WorldExperience() {
     if (!entered) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
+      // Escape closes the topmost layer first: music notes, drawer, city focus.
+      if (musicInfoOpen) {
+        setMusicInfoOpen(false);
+        return;
+      }
       if (searchOpen) {
         closeSearch();
         return;
@@ -238,7 +272,7 @@ export function WorldExperience() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [entered, searchOpen, selectedId, returnToEarth, closeSearch]);
+  }, [entered, musicInfoOpen, searchOpen, selectedId, returnToEarth, closeSearch]);
 
   const toggleFullscreen = async () => {
     try {
@@ -432,7 +466,46 @@ export function WorldExperience() {
           </div>
         </div>
         <Volume2 className="volume-icon" aria-hidden="true" />
+        <button
+          type="button"
+          className="icon-button music-info-toggle"
+          onClick={() => setMusicInfoOpen((value) => !value)}
+          disabled={!selectedCity}
+          aria-label={t.musicNotes}
+        >
+          <Info aria-hidden="true" />
+        </button>
       </section>
+
+      {musicInfoOpen && (
+        <section className="music-info" role="dialog" aria-label={t.musicNotes}>
+          <div className="music-info-head">
+            <p className="eyebrow">{t.musicNotes}</p>
+            <button type="button" className="icon-button" onClick={() => setMusicInfoOpen(false)} aria-label="Close">
+              <X aria-hidden="true" />
+            </button>
+          </div>
+          {cityTracks.length === 0 ? (
+            <p className="music-info-empty">{t.noTrackInfo}</p>
+          ) : (
+            cityTracks.map((track, index) => (
+              <div className="music-track" key={`${track.title}-${index}`}>
+                {track.artworkUrl && <img src={track.artworkUrl} alt="" width={44} height={44} loading="lazy" />}
+                <div className="music-track-meta">
+                  <strong>{track.title}</strong>
+                  <span>{track.artist}</span>
+                  <small>{[track.album, track.genre, track.year].filter(Boolean).join(" · ")}</small>
+                </div>
+                {track.appleMusicUrl && (
+                  <a href={track.appleMusicUrl} target="_blank" rel="noreferrer" aria-label="Apple Music">
+                    <ChevronRight aria-hidden="true" />
+                  </a>
+                )}
+              </div>
+            ))
+          )}
+        </section>
+      )}
 
       {!entered && (
         <section className="intro" role="dialog" aria-modal="true" aria-labelledby="intro-title">

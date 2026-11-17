@@ -767,6 +767,58 @@ input:focus-visible {
   text-transform: none;
   color: var(--muted-copy);
 }
+
+/* Music notes window: Apple Music track metadata above the player. */
+.music-info {
+  position: absolute;
+  right: 28px;
+  bottom: 176px;
+  z-index: 45;
+  width: min(380px, calc(100vw - 56px));
+  padding: 18px 18px 14px;
+  border: 1px solid var(--hairline);
+  border-radius: 18px;
+  background: linear-gradient(140deg, rgba(9, 16, 20, 0.78), rgba(6, 11, 15, 0.5));
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(24px) saturate(120%);
+  animation: card-in 320ms cubic-bezier(.2,.75,.2,1) both;
+}
+
+.music-info-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.music-info-empty { margin: 6px 0 4px; color: var(--muted-copy); font-size: 11px; line-height: 1.7; }
+
+.music-track {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid rgba(233, 239, 235, 0.08);
+}
+
+.music-track img {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.music-track-meta { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+.music-track-meta strong { font-size: 12px; font-weight: 500; letter-spacing: 0.02em; color: #e3ebe7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.music-track-meta span { font-size: 10px; color: var(--muted-copy); }
+.music-track-meta small { font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.08em; color: rgba(231, 235, 230, 0.4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.music-track a { flex: none; color: #a7b4bc; display: inline-flex; transition: color 180ms ease; }
+.music-track a:hover { color: #e3ebe7; }
+.music-track a svg { width: 14px; height: 14px; }
+
+.music-info-toggle { margin-left: 2px; }
 .map-attribution { position: absolute; right: 28px; bottom: 116px; z-index: 40; color: #a7b4bc; font-size: 8px; text-decoration: none; text-shadow: 0 1px 4px #03070b; }
 .empty-results { padding: 24px 10px; color: var(--muted-copy); font-size: 12px; line-height: 1.8; }
 

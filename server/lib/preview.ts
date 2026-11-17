@@ -9,6 +9,10 @@ type ITunesResult = {
   artistName?: string;
   previewUrl?: string;
   artworkUrl100?: string;
+  collectionName?: string;
+  primaryGenreName?: string;
+  releaseDate?: string;
+  trackViewUrl?: string;
 };
 
 type ITunesResponse = { results?: ITunesResult[] };
@@ -31,6 +35,10 @@ function toTrack(result: ITunesResult): PreviewTrack | null {
     previewUrl: result.previewUrl,
     // Bump the 100px artwork Apple returns to a crisper 200px rendering.
     artworkUrl: (result.artworkUrl100 ?? "").replace("100x100", "200x200"),
+    album: result.collectionName,
+    genre: result.primaryGenreName,
+    year: result.releaseDate?.slice(0, 4),
+    appleMusicUrl: result.trackViewUrl,
   };
 }
 

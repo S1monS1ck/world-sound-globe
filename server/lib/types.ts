@@ -10,6 +10,11 @@ export type PreviewTrack = {
   artist: string;
   previewUrl: string;
   artworkUrl: string;
+  // Metadata sourced from Apple Music for the in-app music notes window.
+  album?: string;
+  genre?: string;
+  year?: string;
+  appleMusicUrl?: string;
 };
 
 export type PreviewResponse = {
