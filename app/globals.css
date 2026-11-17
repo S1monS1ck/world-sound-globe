@@ -1155,3 +1155,97 @@ input:focus-visible {
 .play-button:hover {
   background: rgba(255, 255, 255, 0.13);
 }
+
+/* ===== Apple Music typography & spacing ===== */
+/* Follows the Apple Music design language: SF system font stack, strong
+   weight contrast (bold titles / regular body), tight tracking on display
+   sizes, quiet secondary colors, and an 8pt spacing rhythm. */
+:root {
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --secondary-copy: rgba(231, 235, 230, 0.62);
+}
+
+body,
+.intro > p,
+.city-character,
+.country-line,
+.scene-detail,
+.empty-results {
+  font-family: var(--sans);
+  letter-spacing: 0;
+}
+
+/* Display titles: bold sans, tight tracking, calm line height. */
+.place-card h1,
+.intro h1,
+.city-drawer h2,
+.webgl-fallback h2 {
+  font-family: var(--sans);
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.08;
+}
+
+.place-card h1 { font-size: clamp(30px, 4vw, 44px); }
+.city-drawer h2 { font-size: 26px; }
+.webgl-fallback h2 { font-size: 24px; }
+
+/* Secondary title row under the city name. */
+.place-card .local-name {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--secondary-copy);
+}
+
+.city-index {
+  font-family: var(--sans);
+  font-size: 20px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Section eyebrows: SF-style small caps, slightly larger and quieter. */
+.eyebrow {
+  font-family: var(--sans);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+/* Body copy keeps the secondary color Apple Music uses for metadata. */
+.city-character { font-size: 14px; line-height: 1.55; color: var(--secondary-copy); }
+.country-line { font-size: 12px; color: var(--secondary-copy); }
+.scene-detail { font-size: 11px; color: var(--secondary-copy); }
+.intro > p { font-size: 15px; line-height: 1.6; color: var(--secondary-copy); }
+
+/* Mode switch and list rows: semibold sans, no serif. */
+.mode-switch span { font-family: var(--sans); font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.mode-switch small { font-family: var(--sans); font-size: 10px; }
+
+.city-list-name strong {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.city-list-name small { font-size: 12px; }
+
+/* Player and music notes: semibold titles, quiet metadata. */
+.track-meta p { font-family: var(--sans); font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.track-meta span { font-family: var(--sans); font-size: 12px; color: var(--secondary-copy); }
+.music-track-meta strong { font-family: var(--sans); font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+.music-track-meta span { font-family: var(--sans); font-size: 12px; color: var(--secondary-copy); }
+.music-track-meta small { font-size: 10px; }
+
+/* On-globe captions and the hover card follow the same family. */
+.hover-caption span { font-family: var(--sans); font-size: 13px; font-weight: 600; }
+.hover-caption strong { font-family: var(--sans); font-size: 9px; }
+.city-label span { font-family: var(--sans); font-size: 12px; font-weight: 600; }
+.city-label small { font-family: var(--sans); }
+
+/* Brand keeps its spaced-caps look but on the system family. */
+.brand strong { font-family: var(--sans); font-weight: 700; }
+.brand small { font-family: var(--sans); }
