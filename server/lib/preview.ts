@@ -1,11 +1,13 @@
 // iTunes Search API preview lookup. Free, keyless, rate limited to roughly
 // 20 calls/minute — hence the per-city result cache with a 1 hour TTL.
-// Candidates are screened against lrclib.net (free, keyless lyrics) so a
-// track only enters the queue when its lyrics actually mention the city —
-// a title containing "Beijing" alone does not make a song about Beijing.
+// Tracks are chosen by fame and content: famous city anthems are pinned
+// from the hand-curated CITY_ANTHEMS list, and every other candidate must
+// mention the city in its lyrics (lrclib.net, free, keyless) — a title
+// containing "Beijing" alone is not enough.
 // https://performance-partners.apple.com/search-api
 // https://lrclib.net/docs
 import { cities, type City } from "@/lib/cities";
+import { CITY_ANTHEMS } from "./city-anthems";
 import type { PreviewResponse, PreviewTrack } from "./types";
 
 type ITunesResult = {
@@ -96,14 +98,14 @@ function escapeRegExp(text: string) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// The city counts as mentioned when the lyrics contain the local name
+// The city counts as mentioned when the text contains the local name
 // (substring is enough for CJK) or the English name as a whole word, so
 // "Beijing" does not match inside unrelated words.
-function lyricsMentionCity(lyrics: string, city: City): boolean {
-  const text = lyrics.toLowerCase();
-  if (city.nameZh && text.includes(city.nameZh)) return true;
+function mentionsCity(text: string, city: City): boolean {
+  const lower = text.toLowerCase();
+  if (city.nameZh && lower.includes(city.nameZh)) return true;
   if (!city.name) return false;
-  return new RegExp(`\\b${escapeRegExp(city.name.toLowerCase())}\\b`).test(text);
+  return new RegExp(`\\b${escapeRegExp(city.name.toLowerCase())}\\b`).test(lower);
 }
 
 // Runs lookups with bounded concurrency to stay polite to lrclib.
@@ -160,8 +162,17 @@ export async function getCityPreviews(cityId: string, city: City): Promise<Previ
     // only used to top up thin catalogs.
     const seen = new Set<string>();
     const seenArtists = new Set<string>();
+    // Anthems first: hand-picked famous songs tied to the city even when
+    // neither lyrics nor album mention it. One track per title, top hit.
+    for (const anthem of CITY_ANTHEMS[cityId]?.slice(0, 2) ?? []) {
+      if (tracks.length >= TRACKS_PER_CITY) break;
+      const found = await searchSongs(anthem, seen, seenArtists);
+      if (found[0]) tracks.push(found[0]);
+    }
     const terms = [...new Set([city.name, city.nameZh].filter(Boolean))];
-    const perTerm = Math.ceil(TRACKS_PER_CITY / 2);
+    // Leave room for both names: the quota shrinks by whatever the anthems
+    // already took, split evenly across the two search terms.
+    const perTerm = Math.ceil((TRACKS_PER_CITY - tracks.length) / 2);
     for (const term of terms) {
       if (tracks.length >= TRACKS_PER_CITY) break;
       const found = await searchSongs(term, seen, seenArtists);
@@ -175,12 +186,14 @@ export async function getCityPreviews(cityId: string, city: City): Promise<Previ
       const verified: PreviewTrack[] = [];
       const unverified: PreviewTrack[] = [];
       candidates.forEach((track, i) => {
-        (lyrics[i] !== null && lyricsMentionCity(lyrics[i]!, city) ? verified : unverified).push(
-          track,
-        );
+        (lyrics[i] !== null && mentionsCity(lyrics[i]!, city) ? verified : unverified).push(track);
       });
       let taken = 0;
-      for (const track of [...verified, ...unverified]) {
+      // Backfill only accepts tracks whose title at least names the city,
+      // so unrelated instrumental or compilation results do not sneak in;
+      // remaining slots fall through to the genre fallback below.
+      const backfill = unverified.filter((track) => mentionsCity(track.title, city));
+      for (const track of [...verified, ...backfill]) {
         // Cap each name's share so both the international and the home-town
         // catalogue are represented instead of five identical titles.
         if (taken >= perTerm || tracks.length >= TRACKS_PER_CITY) break;
