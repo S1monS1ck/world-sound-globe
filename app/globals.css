@@ -819,6 +819,8 @@ input:focus-visible {
 .music-track a svg { width: 14px; height: 14px; }
 
 .music-info-toggle { margin-left: 2px; }
+
+.spin-icon { animation: spin 1.2s linear infinite; }
 .map-attribution { position: absolute; right: 28px; bottom: 116px; z-index: 40; color: #a7b4bc; font-size: 8px; text-decoration: none; text-shadow: 0 1px 4px #03070b; }
 .empty-results { padding: 24px 10px; color: var(--muted-copy); font-size: 12px; line-height: 1.8; }
 

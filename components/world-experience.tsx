@@ -13,14 +13,14 @@ import {
   Volume2,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import dynamic from "next/dynamic";
-import { Info } from "lucide-react";
+import { Info, Loader2 } from "lucide-react";
 import { cities, getCity, type City } from "@/lib/cities";
 import { getCityScene } from "@/lib/city-scenes";
 import { getCitySignature } from "@/lib/city-signatures";
 import { companionLandmarksFor, curatedFor } from "@/lib/curated";
-import type { PreviewTrack } from "@/server/lib/types";
+import type { PreviewTrack, RadioResponse } from "@/server/lib/types";
 import { SceneErrorBoundary } from "@/components/scene-error-boundary";
 
 // WebGL only exists in the browser: keep the 3D stage out of server rendering.
@@ -61,6 +61,14 @@ const copy = {
     bpm: "BPM",
     musicNotes: "音乐介绍 · APPLE MUSIC",
     noTrackInfo: "这座城市暂无曲目信息。",
+    liveNow: "正在直播",
+    previewClip: "官方 30 秒试听",
+    loadingAudio: "正在连接音源…",
+    audioFailed: "音源不可用 · 已静音",
+    liveLabel: "直播电台",
+    appleSource: "官方试听 · Apple Music",
+    playAudio: "播放",
+    stopAudio: "停止",
   },
   en: {
     title: "The world is sounding",
@@ -90,6 +98,14 @@ const copy = {
     bpm: "BPM",
     musicNotes: "MUSIC NOTES · APPLE MUSIC",
     noTrackInfo: "No track info for this city yet.",
+    liveNow: "Live broadcast",
+    previewClip: "Official 30-second preview",
+    loadingAudio: "Connecting to audio…",
+    audioFailed: "Audio unavailable · muted",
+    liveLabel: "Live radio",
+    appleSource: "Official preview · Apple Music",
+    playAudio: "Play",
+    stopAudio: "Stop",
   },
 } as const;
 
@@ -136,8 +152,13 @@ export function WorldExperience() {
   // Delayed unmount lets the drawer play its exit animation before removal.
   const [searchClosing, setSearchClosing] = useState(false);
   const [query, setQuery] = useState("");
-  const [playing, setPlaying] = useState(false);
-  const [progress, setProgress] = useState(23);
+  const [progress, setProgress] = useState(0);
+  type PlayState = "idle" | "loading" | "playing" | "error";
+  const [playState, setPlayState] = useState<PlayState>("idle");
+  // Real audio sources: live radio for "now", Apple previews for "soul".
+  const [radio, setRadio] = useState<RadioResponse | null>(null);
+  const [trackIndex, setTrackIndex] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [clock, setClock] = useState<Date | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -180,13 +201,52 @@ export function WorldExperience() {
     }
   }, [locale]);
 
+  // Fetch the local live radio station whenever the selected city changes.
   useEffect(() => {
-    if (!playing) return;
-    const timer = window.setInterval(() => {
-      setProgress((value) => (value >= 100 ? 0 : value + 0.18));
-    }, 500);
-    return () => window.clearInterval(timer);
-  }, [playing]);
+    if (!selectedCity) {
+      setRadio(null);
+      return;
+    }
+    let current = true;
+    setRadio(null);
+    fetch(`/api/radio?city=${selectedCity.id}`)
+      .then((response) => (response.ok ? (response.json() as Promise<RadioResponse>) : null))
+      .then((data) => {
+        if (current && data) setRadio(data);
+      })
+      .catch(() => {
+        // Radio stays null; the player shows the muted fallback.
+      });
+    return () => {
+      current = false;
+    };
+  }, [selectedCity]);
+
+  // Any city or mode change stops playback and resets the transport.
+  useEffect(() => {
+    audioRef.current?.pause();
+    setPlayState("idle");
+    setProgress(0);
+    setTrackIndex(0);
+  }, [selectedCity?.id, mode]);
+
+  const currentAudioSrc = mode === "now"
+    ? radio?.streamUrl ?? null
+    : cityTracks[trackIndex]?.previewUrl ?? null;
+
+  const togglePlay = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playState === "playing") {
+      audio.pause();
+      setPlayState("idle");
+      return;
+    }
+    if (!currentAudioSrc) return;
+    audio.src = currentAudioSrc;
+    setPlayState("loading");
+    audio.play().catch(() => setPlayState("error"));
+  }, [playState, currentAudioSrc]);
 
   // Fetch the Apple Music track notes whenever the selected city changes.
   useEffect(() => {
@@ -250,7 +310,8 @@ export function WorldExperience() {
     setSelectedId(null);
     setQuickFocus(false);
     setHoveredCity(null);
-    setPlaying(false);
+    audioRef.current?.pause();
+    setPlayState("idle");
     setProgress(0);
   }, []);
 
@@ -283,16 +344,22 @@ export function WorldExperience() {
     }
   };
 
+  // Player display: real station/track metadata when available, concept copy
+  // while the source is still loading or unavailable.
   const track = selectedCity
     ? mode === "now"
-      ? {
-          title: locale === "zh" ? `${selectedCity.nameZh}，此刻` : `${selectedCity.name}, now`,
-          artist: locale === "zh" ? "城市流行概念队列" : "City pulse concept queue",
-        }
-      : {
-          title: locale === "zh" ? `${selectedCity.nameZh}的地方之声` : `Local voices of ${selectedCity.name}`,
-          artist: locale === "zh" ? selectedCity.soundZh : selectedCity.sound,
-        }
+      ? radio?.station
+        ? { title: radio.station, artist: `${t.liveLabel} · ${locale === "zh" ? selectedCity.nameZh : selectedCity.name}` }
+        : {
+            title: locale === "zh" ? `${selectedCity.nameZh}，此刻` : `${selectedCity.name}, now`,
+            artist: radio ? t.audioFailed : locale === "zh" ? "正在寻找当地电台" : "Looking for a local station",
+          }
+      : cityTracks[trackIndex]
+        ? { title: cityTracks[trackIndex].title, artist: cityTracks[trackIndex].artist }
+        : {
+            title: locale === "zh" ? `${selectedCity.nameZh}的地方之声` : `Local voices of ${selectedCity.name}`,
+            artist: cityTracks.length === 0 ? t.noTrackInfo : locale === "zh" ? selectedCity.soundZh : selectedCity.sound,
+          }
     : {
         title: locale === "zh" ? "等待一座城市" : "Waiting for a city",
         artist: locale === "zh" ? "世界声音地图" : "World sound atlas",
@@ -433,7 +500,7 @@ export function WorldExperience() {
       {selectedScene && <a className="map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>}
 
       <section className="player" aria-label={locale === "zh" ? "播放器" : "Player"}>
-        <div className={`record-art ${playing ? "spinning" : ""}`} style={{ "--city-accent": selectedCity?.accent ?? "#8caab3" } as CSSProperties}>
+        <div className={`record-art ${playState === "playing" ? "spinning" : ""}`} style={{ "--city-accent": selectedCity?.accent ?? "#8caab3" } as CSSProperties}>
           <span />
         </div>
         <div className="track-meta">
@@ -444,11 +511,17 @@ export function WorldExperience() {
         <button
           type="button"
           className="play-button"
-          onClick={() => selectedCity && setPlaying((value) => !value)}
-          disabled={!selectedCity}
-          aria-label={playing ? (locale === "zh" ? "停止播放动效预览" : "Stop playback preview") : (locale === "zh" ? "预览播放动效" : "Preview playback motion")}
+          onClick={togglePlay}
+          disabled={!selectedCity || (playState !== "playing" && !currentAudioSrc)}
+          aria-label={playState === "playing" ? t.stopAudio : t.playAudio}
         >
-          {playing ? <Pause fill="currentColor" aria-hidden="true" /> : <Play fill="currentColor" aria-hidden="true" />}
+          {playState === "loading" ? (
+            <Loader2 className="spin-icon" aria-hidden="true" />
+          ) : playState === "playing" ? (
+            <Pause fill="currentColor" aria-hidden="true" />
+          ) : (
+            <Play fill="currentColor" aria-hidden="true" />
+          )}
         </button>
         <div className="timeline">
           <div className="waveform" aria-hidden="true">
@@ -461,11 +534,50 @@ export function WorldExperience() {
             ))}
           </div>
           <div className="timeline-caption">
-            <span>{playing ? t.playing : t.paused}</span>
-            <span>{t.mock}</span>
+            <span>
+              {playState === "loading"
+                ? t.loadingAudio
+                : playState === "error"
+                  ? t.audioFailed
+                  : playState === "playing"
+                    ? mode === "now" ? t.liveNow : t.previewClip
+                    : t.paused}
+            </span>
+            <span>
+              {mode === "now" ? (radio ? `${t.liveLabel} · Radio Browser` : t.mock) : t.appleSource}
+            </span>
           </div>
         </div>
         <Volume2 className="volume-icon" aria-hidden="true" />
+        {/* Hidden transport element: the actual audio engine behind the player. */}
+        <audio
+          ref={audioRef}
+          onPlaying={() => setPlayState("playing")}
+          onPause={() => setPlayState((state) => (state === "playing" ? "idle" : state))}
+          onWaiting={() => setPlayState("loading")}
+          onError={() => setPlayState("error")}
+          onTimeUpdate={(event) => {
+            const audio = event.currentTarget;
+            if (Number.isFinite(audio.duration) && audio.duration > 0) {
+              setProgress((audio.currentTime / audio.duration) * 100);
+            }
+          }}
+          onEnded={() => {
+            setProgress(0);
+            // Soul mode rotates through the city's three Apple previews.
+            if (mode === "soul" && cityTracks.length > 0) {
+              const next = (trackIndex + 1) % cityTracks.length;
+              setTrackIndex(next);
+              const element = audioRef.current;
+              if (!element) return;
+              element.src = cityTracks[next].previewUrl;
+              setPlayState("loading");
+              element.play().catch(() => setPlayState("error"));
+            } else {
+              setPlayState("idle");
+            }
+          }}
+        />
         <button
           type="button"
           className="icon-button music-info-toggle"

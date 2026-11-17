@@ -74,6 +74,8 @@ export async function getCityRadio(cityId: string, city: City): Promise<RadioRes
     // Timeout or upstream failure degrades to silence, never a 500.
   }
   const response: RadioResponse = { city: cityId, streamUrl, station, source: streamUrl ? "radio-browser" : "none" };
-  cache.set(cityId, { response, expires: Date.now() + CACHE_TTL_MS });
+  // Pin successes for an hour, but let failures retry after a short cooldown
+  // so one transient timeout never mutes a city for the full hour.
+  cache.set(cityId, { response, expires: Date.now() + (streamUrl ? CACHE_TTL_MS : 30_000) });
   return response;
 }
