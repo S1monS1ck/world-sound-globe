@@ -211,6 +211,11 @@ export function WorldExperience() {
     }
   }, [locale]);
 
+  // The music notes window pops up automatically once playback starts.
+  useEffect(() => {
+    if (playState === "playing") setMusicInfoOpen(true);
+  }, [playState]);
+
   // Fetch the local live radio station whenever the selected city changes.
   useEffect(() => {
     if (!selectedCity) {

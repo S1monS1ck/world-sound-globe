@@ -1660,3 +1660,56 @@ body,
   .place-card { bottom: 148px; }
   .player-bar { right: 20px; width: min(460px, calc(100vw - 40px)); }
 }
+
+/* ===== Floating window typography refinement ===== */
+/* One spacing rhythm across all three windows: 16-18px padding, 6-12px
+   internal gaps, quieter metadata, no mixed-size ornaments. */
+.place-card { padding: 18px 20px 16px; border-radius: 16px; }
+.place-card .eyebrow { font-size: 10px; letter-spacing: 0.1em; }
+.place-card h1 { margin-top: 8px; font-size: 30px; }
+.place-card .local-name { font-size: 12px; }
+.place-title-row { margin-top: 10px; align-items: baseline; }
+.place-card .city-index { font-size: 14px; opacity: 0.55; }
+.place-card .country-line { margin-top: 12px; font-size: 12.5px; display: flex; align-items: center; gap: 8px; }
+.place-card .country-line span { width: 3px; height: 3px; border-radius: 50%; background: var(--am-secondary); display: inline-block; }
+.place-card .city-character { margin-top: 6px; font-size: 13px; line-height: 1.55; }
+.place-card .soundprint-meta { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--am-hairline); font-size: 9px; }
+.place-card .soundprint-meta span { font-size: 11px; }
+.place-card .scene-detail { margin-top: 9px; font-size: 10.5px; line-height: 1.5; }
+.place-card .scene-detail small { margin-top: 4px; font-size: 9px; }
+.place-card .back-to-earth { margin-bottom: 12px; }
+
+/* Player window: roomier LCD, compact transport, no source noise. */
+.player-bar { padding: 0 14px; gap: 8px; }
+.pb-controls { gap: 2px; }
+.pb-skip { width: 28px; height: 28px; border-radius: 7px; }
+.pb-skip svg { width: 14px; height: 14px; }
+.pb-play { width: 40px; height: 40px; }
+.pb-lcd { gap: 12px; padding: 4px 8px; }
+.pb-art { width: 44px; height: 44px; border-radius: 8px; }
+.pb-meta { gap: 4px; }
+.pb-meta strong { font-size: 13px; }
+.pb-meta small { font-size: 11px; }
+.pb-progress { height: 3px; margin-top: 3px; }
+.pb-source { display: none; }
+.pb-right { gap: 10px; }
+.volume-icon { width: 15px; height: 15px; }
+
+/* Music notes window: aligned to the player window's right edge and width. */
+.music-info {
+  right: 30px;
+  bottom: 176px;
+  width: min(460px, calc(100vw - 390px));
+}
+
+/* Top toolbar: single-line height, quiet clock, segmented labels only. */
+.topbar { padding: 9px 16px; }
+.mode-switch { background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 9px; padding: 2px; }
+.mode-switch button { padding: 6px 20px; }
+.mode-switch small { display: none; }
+.mode-switch span { font-size: 13px; }
+.earth-clock { gap: 7px; }
+.earth-clock strong { font-size: 12px; font-weight: 500; }
+.nav-search { height: 32px; border-radius: 8px; }
+.icon-button { width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; }
+.icon-button svg { width: 14px; height: 14px; }
