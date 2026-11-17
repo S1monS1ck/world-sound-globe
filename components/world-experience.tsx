@@ -232,7 +232,12 @@ export function WorldExperience() {
 
   // Any city or mode change stops playback and resets the transport.
   useEffect(() => {
-    audioRef.current?.pause();
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      // Live streams cannot seek; only finite previews need rewinding.
+      if (Number.isFinite(audio.duration)) audio.currentTime = 0;
+    }
     setPlayState("idle");
     setProgress(0);
     setTrackIndex(0);

@@ -85,11 +85,12 @@ curl "https://radio.garden/api/ara/content/page/113/talks"
 
 ## 六、实施阶段
 
-- [ ] **阶段 1**：官方 `next dev` 跑通现有页面（弃用 vinext），处理 WebGL SSR（`dynamic(ssr:false)`），全量回归前端交互
-- [ ] **阶段 2**：`/api/preview`（iTunes 代理 + 缓存），curl 可见真实试听 URL
-- [ ] **阶段 3**：`/api/radio`（Radio Garden 主源 + Radio Browser 降级）
-- [ ] **阶段 4**：前端 Player 接线（加载/播放/静音三态），双模式浏览器实测
-- [ ] **阶段 5**：回归收尾；Vercel 部署**须用户明确授权后**单独执行
+- [x] **阶段 1**：官方 `next dev` 跑通现有页面（弃用 vinext），处理 WebGL SSR（`dynamic(ssr:false)`），全量回归前端交互
+- [x] **阶段 2**：`/api/preview`（iTunes 代理 + 缓存），含 Apple Music 元数据（专辑/流派/年份/链接）
+- [x] **阶段 3**：`/api/radio`（Radio Garden 主源 + Radio Browser 降级）——实施时确认 Radio Garden 被 Cloudflare 挡，改以 Radio Browser 为正式主源
+- [x] **阶段 4**：前端 Player 接线（加载/播放/静音三态），双模式浏览器实测；另交付 Apple Music 式正在播放视图与导航栏材质、液态玻璃图层、SF 排版系统
+- [x] **阶段 5 回归**：全交互链路浏览器实测通过（落地/进入/抽屉搜索/选城/电台直播/试听轮播/介绍窗/正在播放/Esc 链/返回地球）；`next build` 与遗留 `build:static` 双通过
+- [ ] **阶段 5 部署**：Vercel 部署**须用户明确授权后**单独执行
 
 ## 七、约定与红线
 
