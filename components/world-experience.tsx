@@ -3,9 +3,7 @@
 import {
   ArrowLeft,
   ChevronRight,
-  CircleGauge,
   Globe2,
-  Headphones,
   Languages,
   Maximize2,
   Minimize2,
@@ -17,6 +15,8 @@ import {
 } from "lucide-react";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { cities, getCity, type City } from "@/lib/cities";
+import { getCityScene } from "@/lib/city-scenes";
+import { getCitySignature } from "@/lib/city-signatures";
 import { SceneErrorBoundary } from "@/components/scene-error-boundary";
 
 const WorldStage = lazy(() =>
@@ -39,16 +39,16 @@ const copy = {
     nowDescription: "当地近期流行",
     soulDescription: "语言、流派与城市记忆",
     global: "全球视角",
-    noCity: "从地球上选择一个发光的城市节点。",
+    noCity: "轻点城市光点，或点悬停时出现的城市名。",
     indexed: "座代表性城市已索引",
-    playing: "正在播放概念队列",
-    paused: "播放已暂停",
-    mock: "视觉原型 · Apple Music 接入下一阶段",
+    playing: "正在预览播放动效",
+    paused: "播放动效未启动",
+    mock: "视觉预览 · 尚未连接音源",
     searchPlaceholder: "搜索城市、国家或地区",
     searchTitle: "城市索引",
     results: "个结果",
     performance: "自适应画质",
-    musicSource: "模拟音乐源",
+    musicSource: "音源待接入",
     reset: "返回地球",
     cityMode: "城市频道",
   },
@@ -64,16 +64,16 @@ const copy = {
     nowDescription: "What the city is playing lately",
     soulDescription: "Language, genre and urban memory",
     global: "Global view",
-    noCity: "Choose a luminous city node on the globe.",
+    noCity: "Tap a city light, or click the name that appears on hover.",
     indexed: "representative cities indexed",
-    playing: "Playing concept queue",
-    paused: "Playback paused",
-    mock: "Experience prototype · Apple Music follows next",
+    playing: "Previewing playback motion",
+    paused: "Playback preview stopped",
+    mock: "Visual preview · No audio source connected",
     searchPlaceholder: "Search city, country or region",
     searchTitle: "City index",
     results: "results",
     performance: "Adaptive quality",
-    musicSource: "Mock music source",
+    musicSource: "Audio source pending",
     reset: "Return to earth",
     cityMode: "City channel",
   },
@@ -122,6 +122,8 @@ export function WorldExperience() {
   const [reducedMotion, setReducedMotion] = useState(false);
   const [webgl, setWebgl] = useState(true);
   const selectedCity = getCity(selectedId);
+  const selectedScene = selectedCity ? getCityScene(selectedCity.id) : undefined;
+  const selectedSignature = selectedCity ? getCitySignature(selectedCity.id) : undefined;
   const t = copy[locale];
 
   useEffect(() => {
@@ -133,7 +135,9 @@ export function WorldExperience() {
     media.addEventListener("change", updateMotion);
 
     const canvas = document.createElement("canvas");
-    setWebgl(Boolean(canvas.getContext("webgl2") || canvas.getContext("webgl")));
+    const context = canvas.getContext("webgl2");
+    setWebgl(Boolean(context));
+    context?.getExtension("WEBGL_lose_context")?.loseContext();
 
     const updateFullscreen = () => setFullscreen(Boolean(document.fullscreenElement));
     document.addEventListener("fullscreenchange", updateFullscreen);
@@ -175,7 +179,16 @@ export function WorldExperience() {
 
   const selectCity = useCallback((id: string) => {
     setSelectedId(id);
+    setHoveredCity(null);
     setSearchOpen(false);
+    setQuery("");
+    setProgress(0);
+  }, []);
+
+  const returnToEarth = useCallback(() => {
+    setSelectedId(null);
+    setHoveredCity(null);
+    setPlaying(false);
     setProgress(0);
   }, []);
 
@@ -204,8 +217,8 @@ export function WorldExperience() {
       };
 
   return (
-    <main className="experience-shell">
-      <div className="stage" aria-label={locale === "zh" ? "可交互三维地球" : "Interactive 3D earth"}>
+    <main className={`experience-shell ${entered ? "is-entered" : "is-landing"}`}>
+      <div className={`stage ${!entered ? "is-intro" : ""} ${selectedCity ? "is-city" : ""}`} aria-label={locale === "zh" ? "可交互三维地球" : "Interactive 3D earth"}>
         {webgl ? (
           <SceneErrorBoundary fallback={<WebGLFallback locale={locale} />}>
             <Suspense fallback={<div className="scene-loading" aria-hidden="true" />}>
@@ -228,11 +241,11 @@ export function WorldExperience() {
       <div className="edge-vignette" aria-hidden="true" />
 
       <header className="topbar">
-        <button className="brand" type="button" onClick={() => setSelectedId(null)} aria-label={t.global}>
+        <button className="brand" type="button" onClick={returnToEarth} aria-label={t.global}>
           <span className="brand-mark"><span /></span>
           <span>
             <strong>WORLD / SOUND</strong>
-            <small>A living atlas · Prototype 01</small>
+            <small>AN ATLAS OF PLACES & SOUND</small>
           </span>
         </button>
 
@@ -269,7 +282,7 @@ export function WorldExperience() {
       <section className={`place-card ${selectedCity ? "is-visible" : ""}`} aria-live="polite">
         {selectedCity ? (
           <>
-            <button className="back-to-earth" type="button" onClick={() => setSelectedId(null)}>
+            <button className="back-to-earth" type="button" onClick={returnToEarth}>
               <ArrowLeft aria-hidden="true" /> {t.reset}
             </button>
             <p className="eyebrow">{selectedCity.region} · {t.cityMode}</p>
@@ -287,6 +300,10 @@ export function WorldExperience() {
             </p>
             <p className="city-character">
               {locale === "zh" ? selectedCity.characterZh : selectedCity.character}
+            </p>
+            <p className="scene-detail">
+              {selectedScene ? (locale === "zh" ? selectedScene.landmarkNameZh : selectedScene.landmarkName) : selectedSignature ? (locale === "zh" ? `${selectedSignature.nameZh} · 造型速写` : `${selectedSignature.name} · visual sketch`) : (locale === "zh" ? "城市建筑速写 · 风格化场景" : "Architectural sketch · stylized scene")}
+              {selectedScene && <small>{selectedScene.lat.toFixed(5)}° / {selectedScene.lon.toFixed(5)}°</small>}
             </p>
           </>
         ) : (
@@ -310,26 +327,26 @@ export function WorldExperience() {
       )}
 
       <aside className="system-rail" aria-label={locale === "zh" ? "系统状态" : "System status"}>
-        <div><CircleGauge aria-hidden="true" /><span>{t.performance}</span><strong>AUTO</strong></div>
         <div><Globe2 aria-hidden="true" /><span>{cities.length} {t.indexed}</span></div>
-        <div><Headphones aria-hidden="true" /><span>{t.musicSource}</span></div>
-        <small>NASA · VIIRS / BLUE MARBLE</small>
+        <small>NATURAL EARTH / NIGHT LIGHTS</small>
       </aside>
+      {selectedScene && <a className="map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a>}
 
       <section className="player" aria-label={locale === "zh" ? "播放器" : "Player"}>
-        <div className="record-art" style={{ "--city-accent": selectedCity?.accent ?? "#8caab3" } as CSSProperties}>
-          <span className={playing ? "spinning" : ""} />
+        <div className={`record-art ${playing ? "spinning" : ""}`} style={{ "--city-accent": selectedCity?.accent ?? "#8caab3" } as CSSProperties}>
+          <span />
         </div>
         <div className="track-meta">
           <p>{track.title}</p>
           <span>{track.artist}</span>
+          <small className="compact-preview-note">{t.mock}</small>
         </div>
         <button
           type="button"
           className="play-button"
           onClick={() => selectedCity && setPlaying((value) => !value)}
           disabled={!selectedCity}
-          aria-label={playing ? "Pause" : "Play"}
+          aria-label={playing ? (locale === "zh" ? "停止播放动效预览" : "Stop playback preview") : (locale === "zh" ? "预览播放动效" : "Preview playback motion")}
         >
           {playing ? <Pause fill="currentColor" aria-hidden="true" /> : <Play fill="currentColor" aria-hidden="true" />}
         </button>
@@ -366,7 +383,21 @@ export function WorldExperience() {
       )}
 
       {searchOpen && (
-        <section className="city-drawer" role="dialog" aria-modal="true" aria-labelledby="city-search-title">
+        <section className="city-drawer" role="dialog" aria-modal="true" aria-labelledby="city-search-title"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setSearchOpen(false);
+            if (event.key !== "Tab") return;
+            const controls = event.currentTarget.querySelectorAll<HTMLElement>("button, input");
+            const first = controls[0];
+            const last = controls[controls.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+              event.preventDefault();
+              last?.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+              event.preventDefault();
+              first?.focus();
+            }
+          }}>
           <div className="drawer-head">
             <div>
               <p className="eyebrow">WORLD INDEX · {cities.length}</p>
@@ -391,15 +422,18 @@ export function WorldExperience() {
               <button key={city.id} type="button" onClick={() => selectCity(city.id)}>
                 <span className="city-dot" style={{ background: city.accent }} />
                 <span className="city-list-name">
-                  <strong>{city.localName}</strong>
+                  <strong>{cityDisplayName(city, locale)}</strong>
                   <small>{city.name} · {locale === "zh" ? city.countryZh : city.country}</small>
                 </span>
                 <span className={`prominence prominence-${city.prominence}`}>
-                  {city.prominence === "global" ? "SIGNATURE" : city.prominence === "regional" ? "REGIONAL" : "INDEXED"}
+                  {getCityScene(city.id) ? (locale === "zh" ? "3D 地标" : "3D LANDMARK") : getCitySignature(city.id)
+                    ? (locale === "zh" ? "3D 地标速写" : "3D LANDMARK SKETCH")
+                    : locale === "zh" ? "3D 城市速写" : "3D CITY SKETCH"}
                 </span>
                 <ChevronRight aria-hidden="true" />
               </button>
             ))}
+            {filteredCities.length === 0 && <p className="empty-results">{locale === "zh" ? "没有找到这座城市，试试国家、地区或音乐风格。" : "No city found. Try a country, region or music style."}</p>}
           </div>
         </section>
       )}
