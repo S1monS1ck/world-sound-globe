@@ -145,10 +145,9 @@ function buildGeography(data: Geography, extent: number, restrained = false, cle
     const raw = building.height * (restrained ? 2.1 : 3.2) * boost * jitter;
     const step = restrained ? 8 : 12;
     const height = THREE.MathUtils.clamp(Math.round(raw / step) * step, restrained ? 8 : 12, restrained ? 48 : 108);
-    // Ground every block: real min-heights (bridges, stilts) exaggerated by the
-    // height boost would leave buildings hovering at street-level views.
-    const geometry = new THREE.ExtrudeGeometry(shape, { depth: Math.max(1, height), bevelEnabled: false, steps: 1, curveSegments: 1 });
-    curveGeometry(geometry, 2);
+    const floor = THREE.MathUtils.clamp((building.minHeight || 0) * (restrained ? 2.1 : 3.2), 0, height - 2);
+    const geometry = new THREE.ExtrudeGeometry(shape, { depth: Math.max(1, height - floor), bevelEnabled: false, steps: 1, curveSegments: 1 });
+    curveGeometry(geometry, floor + 2);
     buildingBatches[Math.abs(building.id) % 4].push(geometry);
     if (restrained) {
       const cx = footprint.reduce((s, p) => s + p.x, 0) / footprint.length;
@@ -266,14 +265,7 @@ function GeographicDistrict({ data, landmark, heading, displayCenter }: { data: 
   const terrainExtent = extent + 30;
   const clearRadius = gateway ? 120 : restrained ? 110 : landmark === "eiffel" ? 70 : landmark === "elizabeth-tower" ? 60 : landmark === "wild-goose-pagoda" ? 70 : landmark === "canton-tower" || landmark === "taipei-101" || landmark === "bank-of-china-tower" ? 62 : landmark === "west-pearl-tower" ? 45 : 55;
   const geometry = useMemo(() => buildGeography(data, extent, restrained, clearRadius), [data, extent, restrained, clearRadius]);
-  // Real-world facade mix: cool concrete, warm sandstone, blue glass and brick taupe,
-  // so the miniature reads as a lived-in city instead of a single gray mass.
-  const materials = useMemo(() => [
-    { color: "#98a2ad", roughness: 0.9, metalness: 0 },
-    { color: "#b3a48e", roughness: 0.85, metalness: 0 },
-    { color: "#6f8fa3", roughness: 0.35, metalness: 0.35 },
-    { color: "#a08a7c", roughness: 0.9, metalness: 0 },
-  ].map(({ color, roughness, metalness }) => new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.06, roughness, metalness })), []);
+  const materials = useMemo(() => ["#76839b","#8b96a8","#66748c","#9aa4b4"].map((color) => new THREE.MeshStandardMaterial({color, emissive:color, emissiveIntensity:0.05, roughness:0.95})), []);
   const waterMaterial = useMemo(()=>new THREE.MeshBasicMaterial({color:"#0d2b3d",depthTest:false,depthWrite:false,side:THREE.DoubleSide}),[]);
   const parkMaterial = useMemo(()=>new THREE.MeshBasicMaterial({color:"#2b4a41",depthTest:false,depthWrite:false,side:THREE.DoubleSide}),[]);
   const roadMaterial = useMemo(()=>new THREE.LineBasicMaterial({color:"#9a8f77",transparent:true,opacity:0.65,depthTest:false,depthWrite:false}),[]);

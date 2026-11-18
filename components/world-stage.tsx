@@ -276,10 +276,10 @@ function CameraRig({
   const firstRun = useRef(true);
   const scene = selectedCity ? getCityScene(selectedCity.id) : undefined;
   const visualAnchor = useMemo(() => selectedCity ? getCityVisualAnchor(selectedCity) : undefined, [selectedCity]);
-  // One framing rule for every city: stand at the district rim just above the
-  // rooftops, look across the blocks at the landmark, keep the globe limb as horizon.
+  // Every scene city shares the Chengdu-approved eye-level stand (user rollout OK
+  // 2026-11-19); district modeling itself stays untouched.
   const framing = useMemo(() => {
-    if (!selectedCity) return { reach: 0, cameraHeight: 0, lookLift: 0, minDistance: 2.1, minPolar: 0, maxPolar: Math.PI };
+    if (!selectedCity) return { reach: 0, cameraHeight: 0, lookLift: 0, bearing: 180, minDistance: 2.1, minPolar: 0, maxPolar: Math.PI };
     const narrow = size.width < 680;
     if (scene) {
       const height = LANDMARK_HEIGHT_METERS[scene.landmark] * landmarkDisplayScale(scene.landmark) * CITY_DISPLAY_SCALE;
@@ -295,6 +295,7 @@ function CameraRig({
         reach,
         cameraHeight,
         lookLift,
+        bearing: scene.heading,
         minDistance: 0.55 * Math.hypot(reach, cameraHeight - lookLift),
         minPolar: polar - Math.PI * 0.085,
         maxPolar: Math.min(polar + Math.PI * 0.006, Math.PI * 0.495),
@@ -303,7 +304,7 @@ function CameraRig({
     // Sketch vignettes have smaller footprints: stand closer, keep the same eye-level band.
     const reach = narrow ? 0.075 : 0.06;
     const polar = Math.atan2(reach, 0.0056);
-    return { reach, cameraHeight: 0.0136, lookLift: 0.008, minDistance: 0.04, minPolar: Math.PI * 0.36, maxPolar: Math.min(polar + Math.PI * 0.006, Math.PI * 0.47) };
+    return { reach, cameraHeight: 0.0136, lookLift: 0.008, bearing: 180, minDistance: 0.04, minPolar: Math.PI * 0.36, maxPolar: Math.min(polar + Math.PI * 0.006, Math.PI * 0.47) };
   }, [selectedCity, scene, size.width]);
   const minimumDistance = framing.minDistance;
   const maximumDistance = 7.5;
@@ -340,8 +341,7 @@ function CameraRig({
       const longitude = scene?.displayLon ?? scene?.lon ?? visualAnchor?.lon ?? selectedCity.lon;
       const { up, east, north } = tangentBasis(latitude, longitude);
       const surface = cityVector(latitude, longitude);
-      // Approach Shanghai and Beijing from the south; sketch cities from the south likewise.
-      const bearing = (scene ? (scene.id === "shanghai" || scene.id === "beijing" ? 180 : scene.heading) : 180) * Math.PI / 180;
+      const bearing = framing.bearing * Math.PI / 180;
       endPosition.current.copy(surface).addScaledVector(up, framing.cameraHeight)
         .addScaledVector(north, Math.cos(bearing) * framing.reach)
         .addScaledVector(east, Math.sin(bearing) * framing.reach);
