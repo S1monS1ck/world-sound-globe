@@ -301,6 +301,9 @@ export function WorldExperience() {
             <p className="city-character">
               {locale === "zh" ? selectedCity.characterZh : selectedCity.character}
             </p>
+            <p className="city-intro">
+              {locale === "zh" ? selectedCity.introZh : selectedCity.intro}
+            </p>
             <p className="scene-detail">
               {selectedScene ? (locale === "zh" ? selectedScene.landmarkNameZh : selectedScene.landmarkName) : selectedSignature ? (locale === "zh" ? `${selectedSignature.nameZh} · 造型速写` : `${selectedSignature.name} · visual sketch`) : (locale === "zh" ? "城市建筑速写 · 风格化场景" : "Architectural sketch · stylized scene")}
               {selectedScene && <small>{selectedScene.lat.toFixed(5)}° / {selectedScene.lon.toFixed(5)}°</small>}

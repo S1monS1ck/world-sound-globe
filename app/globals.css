@@ -514,6 +514,15 @@ input:focus-visible {
   line-height: 1.75;
 }
 
+/* Factual scene-and-landmark note, quieter than the poetic character line. */
+.city-intro {
+  margin: 10px 0 0;
+  color: var(--muted-copy);
+  font-size: 10.5px;
+  line-height: 1.7;
+  opacity: 0.82;
+}
+
 .text-action {
   display: inline-flex;
   align-items: center;
@@ -964,7 +973,7 @@ input:focus-visible {
   .place-title-row { margin-top: 10px; }
   .place-card .eyebrow { font-size: 7px; }
   .place-card .local-name { font-size: 10px; }
-  .place-card .city-character, .place-card .city-index { display: none; }
+  .place-card .city-character, .place-card .city-intro, .place-card .city-index { display: none; }
   .place-card .country-line { display: block; margin-top: 9px; font-size: 8px; line-height: 1.5; }
   .place-card .country-line span { display: none; }
   .place-card .back-to-earth { margin-bottom: 8px; font-size: 8px; }

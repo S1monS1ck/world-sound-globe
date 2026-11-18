@@ -6,7 +6,7 @@ import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import type { City } from "@/lib/cities";
 import { getCityScene } from "@/lib/city-scenes";
 import { EARTH_RADIUS, EARTH_METERS, cityVector, tangentBasis } from "@/lib/globe";
-import { LandmarkModel } from "@/components/landmark-model";
+import { LandmarkModel, type LandmarkKind } from "@/components/landmark-model";
 import { CityVignette } from "@/components/city-vignette";
 
 type Coordinate = [number, number];
@@ -24,8 +24,20 @@ type Point = { x: number; y: number };
 const geographyCache = new Map<string, Promise<Geography>>();
 const ASSET_BASE = import.meta.env.BASE_URL ?? "/";
 // A compact on-globe miniature: legible at orbital distance without becoming a second landscape.
-const CITY_DISPLAY_SCALE = 0.00011;
+export const CITY_DISPLAY_SCALE = 0.00011;
 const DISPLAY_RADIUS_METERS = EARTH_RADIUS / CITY_DISPLAY_SCALE;
+
+// Display disc radius per landmark, in miniature meters.
+export function districtExtent(landmark: LandmarkKind) {
+  return landmark === "oriental-pearl" || landmark === "temple-of-heaven" ? 700 : landmark === "gateway-india" ? 380 : 500;
+}
+
+// Low landmarks are enlarged so they stay legible beside the mapped blocks;
+// tall ones are capped near 240 m so the street-level camera stays inside the
+// block field and no tower dwarfs its district.
+export function landmarkDisplayScale(landmark: LandmarkKind) {
+  return landmark === "temple-of-heaven" ? 6 : landmark === "gateway-india" ? 7.5 : landmark === "elizabeth-tower" ? 2.2 : landmark === "wild-goose-pagoda" ? 3 : landmark === "canton-tower" ? 0.4 : landmark === "taipei-101" ? 0.47 : landmark === "oriental-pearl" ? 0.51 : landmark === "bank-of-china-tower" ? 0.65 : landmark === "west-pearl-tower" ? 0.71 : landmark === "tokyo-tower" ? 0.72 : landmark === "eiffel" ? 0.73 : 1;
+}
 
 function localPoint(coordinate: Coordinate, center: Coordinate): Point {
   return {
@@ -133,9 +145,10 @@ function buildGeography(data: Geography, extent: number, restrained = false, cle
     const raw = building.height * (restrained ? 2.1 : 3.2) * boost * jitter;
     const step = restrained ? 8 : 12;
     const height = THREE.MathUtils.clamp(Math.round(raw / step) * step, restrained ? 8 : 12, restrained ? 48 : 108);
-    const floor = THREE.MathUtils.clamp((building.minHeight || 0) * (restrained ? 2.1 : 3.2), 0, height - 2);
-    const geometry = new THREE.ExtrudeGeometry(shape, { depth: Math.max(1, height - floor), bevelEnabled: false, steps: 1, curveSegments: 1 });
-    curveGeometry(geometry, floor + 2);
+    // Ground every block: real min-heights (bridges, stilts) exaggerated by the
+    // height boost would leave buildings hovering at street-level views.
+    const geometry = new THREE.ExtrudeGeometry(shape, { depth: Math.max(1, height), bevelEnabled: false, steps: 1, curveSegments: 1 });
+    curveGeometry(geometry, 2);
     buildingBatches[Math.abs(building.id) % 4].push(geometry);
     if (restrained) {
       const cx = footprint.reduce((s, p) => s + p.x, 0) / footprint.length;
@@ -249,11 +262,18 @@ function buildGeography(data: Geography, extent: number, restrained = false, cle
 function GeographicDistrict({ data, landmark, heading, displayCenter }: { data: Geography; landmark: Parameters<typeof LandmarkModel>[0]["kind"]; heading: number; displayCenter: Coordinate }) {
   const restrained = landmark === "temple-of-heaven";
   const gateway = landmark === "gateway-india";
-  const extent = landmark === "oriental-pearl" || restrained ? 700 : gateway ? 380 : 500;
+  const extent = districtExtent(landmark);
   const terrainExtent = extent + 30;
   const clearRadius = gateway ? 120 : restrained ? 110 : landmark === "eiffel" ? 70 : landmark === "elizabeth-tower" ? 60 : landmark === "wild-goose-pagoda" ? 70 : landmark === "canton-tower" || landmark === "taipei-101" || landmark === "bank-of-china-tower" ? 62 : landmark === "west-pearl-tower" ? 45 : 55;
   const geometry = useMemo(() => buildGeography(data, extent, restrained, clearRadius), [data, extent, restrained, clearRadius]);
-  const materials = useMemo(() => ["#76839b","#8b96a8","#66748c","#9aa4b4"].map((color) => new THREE.MeshStandardMaterial({color, emissive:color, emissiveIntensity:0.05, roughness:0.95})), []);
+  // Real-world facade mix: cool concrete, warm sandstone, blue glass and brick taupe,
+  // so the miniature reads as a lived-in city instead of a single gray mass.
+  const materials = useMemo(() => [
+    { color: "#98a2ad", roughness: 0.9, metalness: 0 },
+    { color: "#b3a48e", roughness: 0.85, metalness: 0 },
+    { color: "#6f8fa3", roughness: 0.35, metalness: 0.35 },
+    { color: "#a08a7c", roughness: 0.9, metalness: 0 },
+  ].map(({ color, roughness, metalness }) => new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.06, roughness, metalness })), []);
   const waterMaterial = useMemo(()=>new THREE.MeshBasicMaterial({color:"#0d2b3d",depthTest:false,depthWrite:false,side:THREE.DoubleSide}),[]);
   const parkMaterial = useMemo(()=>new THREE.MeshBasicMaterial({color:"#2b4a41",depthTest:false,depthWrite:false,side:THREE.DoubleSide}),[]);
   const roadMaterial = useMemo(()=>new THREE.LineBasicMaterial({color:"#9a8f77",transparent:true,opacity:0.65,depthTest:false,depthWrite:false}),[]);
@@ -291,7 +311,7 @@ function GeographicDistrict({ data, landmark, heading, displayCenter }: { data: 
       <lineSegments geometry={geometry.coast} material={coastMaterial} renderOrder={-2} />
       {geometry.buildings.map((batch,index)=>batch && <mesh key={index} geometry={batch} material={materials[index]}/>)}
       {geometry.roofs && <mesh geometry={geometry.roofs} material={roofMaterial} />}
-      <group position={[0,2,0]} rotation={[0,Math.PI-heading*Math.PI/180,0]} scale={restrained ? 6 : gateway ? 7.5 : landmark === "elizabeth-tower" ? 2.2 : landmark === "wild-goose-pagoda" ? 3 : 1}>
+      <group position={[0,2,0]} rotation={[0,Math.PI-heading*Math.PI/180,0]} scale={landmarkDisplayScale(landmark)}>
         <LandmarkModel kind={landmark}/>
       </group>
     </group>

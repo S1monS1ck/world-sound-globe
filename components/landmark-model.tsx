@@ -17,8 +17,23 @@ export type LandmarkKind =
   | "west-pearl-tower"
   | "wild-goose-pagoda";
 
+// Published overall heights in meters, matching each builder's top vertex.
+export const LANDMARK_HEIGHT_METERS: Record<LandmarkKind, number> = {
+  eiffel: 330,
+  "oriental-pearl": 468,
+  "elizabeth-tower": 96,
+  "gateway-india": 26,
+  "tokyo-tower": 333,
+  "temple-of-heaven": 38,
+  "canton-tower": 600,
+  "taipei-101": 508,
+  "bank-of-china-tower": 367,
+  "west-pearl-tower": 339,
+  "wild-goose-pagoda": 64,
+};
+
 type Point = [number, number, number];
-type Finish = { color: string; metalness?: number; roughness?: number };
+type Finish = { color: string; metalness?: number; roughness?: number; emissive?: string; emissiveIntensity?: number };
 type ModelPart = Finish & { geometry: THREE.BufferGeometry };
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -531,9 +546,10 @@ function bankOfChinaTower() {
 // Tripod legs, concrete shaft and stacked observation pods of Chengdu 339.
 function westPearlTower() {
   const b = new ModelBuilder({
-    concrete: { color: "#b8bcc0", roughness: 0.8 },
-    pod: { color: "#8fa3ad", metalness: 0.35, roughness: 0.35 },
-    glass: { color: "#375462", metalness: 0.4, roughness: 0.3 },
+    concrete: { color: "#c9c4bb", roughness: 0.8 },
+    // Floodlit pods: the tower's night identity is warm amber against the cool city.
+    pod: { color: "#8fa3ad", metalness: 0.35, roughness: 0.35, emissive: "#ff8c3a", emissiveIntensity: 0.55 },
+    glass: { color: "#375462", metalness: 0.4, roughness: 0.3, emissive: "#ffb066", emissiveIntensity: 0.4 },
     mast: { color: "#d2d6d9", metalness: 0.5, roughness: 0.4 },
   });
   for (let i = 0; i < 3; i += 1) {
@@ -603,9 +619,9 @@ export function LandmarkModel({ kind }: { kind: LandmarkKind }) {
   useEffect(() => () => parts.forEach(({ geometry }) => geometry.dispose()), [parts]);
   return (
     <group userData={{ landmark: kind, units: "meters" }}>
-      {parts.map(({ geometry, color, metalness = 0, roughness = 0.8 }, index) => (
+      {parts.map(({ geometry, color, metalness = 0, roughness = 0.8, emissive, emissiveIntensity }, index) => (
         <mesh key={`${kind}-${index}`} geometry={geometry}>
-          <meshStandardMaterial color={color} metalness={metalness} roughness={roughness} emissive={color} emissiveIntensity={0.06} />
+          <meshStandardMaterial color={color} metalness={metalness} roughness={roughness} emissive={emissive ?? color} emissiveIntensity={emissiveIntensity ?? 0.06} />
         </mesh>
       ))}
     </group>

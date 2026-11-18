@@ -137,7 +137,11 @@ function signatureModel(builder: SketchBuilder, kind: SignatureKind) {
       builder.box(0, 82, 0, 220, 7, 105, "pale");
       builder.cylinder(0, 99, 0, 41, 43, 28, "ivory", 24);
       builder.sphere(0, 113, 0, 42, "pale", .7);
-      builder.cylinder(0, 149, 0, 3, 6, 18, "gold", 10);
+      // The bronze Angel of Victory crowns the dome instead of a plain finial.
+      builder.cylinder(0, 145, 0, 2.5, 5, 12, "pale", 10);
+      builder.sphere(0, 156, 0, 3, "gold");
+      builder.beam([-2, 154, 0], [-10, 162, 0], 1.6, "gold");
+      builder.beam([2, 154, 0], [10, 162, 0], 1.6, "gold");
       for (const x of [-95, 95]) for (const z of [-40, 40]) {
         builder.cylinder(x, 96, z, 12, 13, 25, "pale", 12);
         builder.sphere(x, 109, z, 13, "ivory", .55);
@@ -605,10 +609,11 @@ function signatureModel(builder: SketchBuilder, kind: SignatureKind) {
       builder.box(0, 11, 0, 144, 22, 144, "stone");
       builder.box(0, 29, 0, 93, 14, 93, "pale");
       builder.cylinder(0, 132, 0, 10, 24, 191, "ivory", 4);
+      // A distinct observation cup sits below the gold-leaf flame.
       builder.box(0, 229, 0, 41, 10, 41, "stone");
-      builder.cylinder(0, 247, 0, 7, 13, 30, "gold", 7);
-      builder.add(new THREE.ConeGeometry(13, 33, 7), "gold", 0, 278, 0);
-      builder.add(new THREE.ConeGeometry(6, 24, 7), "ivory", -4, 272, 0);
+      builder.box(0, 237, 0, 33, 6, 33, "pale");
+      builder.cylinder(0, 250, 0, 7, 13, 22, "gold", 7);
+      builder.add(new THREE.ConeGeometry(11, 30, 7), "gold", 0, 276, 0);
       break;
     }
     case "stlouis": {
@@ -668,10 +673,13 @@ function signatureModel(builder: SketchBuilder, kind: SignatureKind) {
     }
     case "nseoul": {
       builder.cylinder(0, 95, 0, 8, 16, 190, "ivory", 16);
-      for (const [y, radius] of [[30, 17], [72, 15], [115, 13], [155, 11]]) builder.cylinder(0, y, 0, radius, radius, 5, "red", 16);
-      builder.cylinder(0, 194, 0, 25, 29, 19, "pale", 24);
-      builder.cylinder(0, 208, 0, 18, 25, 11, "red", 24);
-      builder.cylinder(0, 242, 0, 2, 5, 59, "ivory", 12);
+      // The Namsan tower wears a multi-storey glazed drum, not a solid pod.
+      builder.cylinder(0, 186, 0, 30, 26, 6, "pale", 24);
+      builder.cylinder(0, 197, 0, 25, 29, 16, "shadow", 24);
+      builder.cylinder(0, 208, 0, 22, 25, 7, "red", 24);
+      builder.cylinder(0, 215, 0, 16, 22, 6, "pale", 24);
+      builder.cylinder(0, 244, 0, 2, 5, 52, "ivory", 12);
+      builder.cylinder(0, 272, 0, 0.4, 1.6, 12, "red", 8);
       break;
     }
     case "cntower": {
@@ -698,6 +706,9 @@ function signatureModel(builder: SketchBuilder, kind: SignatureKind) {
       }
       builder.box(5, 188, 0, 243, 12, 61, "accent");
       builder.box(30, 196, 0, 217, 5, 57, "pale");
+      // The sky park cantilevers past the end tower, with the infinity pool as a dark waterline.
+      builder.box(-133, 189, 0, 44, 10, 57, "accent");
+      builder.box(30, 199, 0, 200, 1.5, 40, "shadow");
       break;
     }
     case "hagia": {
@@ -706,11 +717,15 @@ function signatureModel(builder: SketchBuilder, kind: SignatureKind) {
       builder.sphere(0, 109, 0, 57, "roof", 0.63);
       for (const x of [-84, 84]) for (const z of [-69, 69]) {
         builder.cylinder(x, 84, z, 4, 7, 168, "pale", 12);
+        // Each minaret carries a balcony ring below its conical cap.
+        builder.cylinder(x, 150, z, 7.5, 6, 5, "ivory", 12);
         builder.cylinder(x, 177, z, 0, 10, 27, "roof", 12);
       }
       for (const x of [-54, 54]) {
         builder.sphere(x, 81, 0, 22, "roof", 0.62);
         builder.box(x, 47, 0, 40, 52, 50, "pale");
+        // Smaller quarter-domes cascade up toward the great dome.
+        builder.sphere(x, 96, 0, 13, "roof", 0.55);
       }
       break;
     }
@@ -726,11 +741,15 @@ function signatureModel(builder: SketchBuilder, kind: SignatureKind) {
       for (const angle of [0, 2.09, 4.18]) {
         builder.box(Math.cos(angle) * 31, 39, Math.sin(angle) * 31, 35, 78, 29, "pale", -angle);
       }
-      for (const [base, height, width] of [[75, 61, 45], [136, 48, 34], [184, 37, 23], [221, 32, 15]]) {
+      // The Y-plan wings step back in a spiral as the tower climbs toward 828 m.
+      const tiers = [[75, 55, 45], [130, 46, 36], [176, 38, 28], [214, 31, 21], [245, 25, 15], [270, 20, 10]] as const;
+      tiers.forEach(([base, height, width], index) => {
         builder.box(0, base + height / 2, 0, width, height, width, "stone");
         builder.box(0, base + height, 0, width + 2, 2, width + 2, "accent");
-      }
-      builder.cylinder(0, 276, 0, 0.3, 6, 47, "pale", 12);
+        const angle = index * 0.9;
+        builder.box(Math.cos(angle) * width * 0.55, base + height * 0.4, Math.sin(angle) * width * 0.55, width * 0.5, height * 0.8, width * 0.42, "pale", -angle);
+      });
+      builder.cylinder(0, 312, 0, 0.3, 4, 46, "pale", 12);
       break;
     }
     case "sagrada": {
@@ -797,13 +816,20 @@ function signatureModel(builder: SketchBuilder, kind: SignatureKind) {
       break;
     }
     case "watarun": {
-      builder.box(0, 15, 0, 88, 30, 88, "stone");
-      for (const [y, bottom, top] of [[53, 49, 31], [92, 32, 19], [125, 20, 11], [152, 11, 5]]) {
-        builder.cylinder(0, y, 0, top, bottom, 30, "pale", 8);
-        builder.cylinder(0, y + 17, 0, top * 1.08, top * 0.89, 4, "accent", 8);
+      // One tall central prang ringed by four smaller satellite prangs on terraced bases.
+      builder.box(0, 10, 0, 150, 20, 150, "stone");
+      builder.box(0, 24, 0, 112, 10, 112, "pale");
+      builder.box(0, 33, 0, 88, 8, 88, "stone");
+      for (const [y, bottom, top] of [[53, 42, 27], [88, 28, 17], [117, 18, 10], [141, 10, 4.5]]) {
+        builder.cylinder(0, y, 0, top, bottom, 28, "pale", 8);
+        builder.cylinder(0, y + 15, 0, top * 1.1, top * 0.9, 4, "accent", 8);
       }
-      builder.cylinder(0, 180, 0, 0.2, 5, 40, "gold", 8);
-      for (const x of [-82, 82]) builder.cylinder(x, 48, 0, 4, 23, 96, "stone", 8);
+      builder.cylinder(0, 170, 0, 0.2, 4.5, 36, "gold", 8);
+      for (const x of [-58, 58]) for (const z of [-58, 58]) {
+        builder.cylinder(x, 42, z, 6, 16, 62, "pale", 8);
+        builder.cylinder(x, 76, z, 3, 7, 14, "accent", 8);
+        builder.cylinder(x, 90, z, 0.2, 3.4, 16, "gold", 8);
+      }
       break;
     }
     case "xianbell": {
@@ -818,14 +844,20 @@ function signatureModel(builder: SketchBuilder, kind: SignatureKind) {
       break;
     }
     case "osakacastle": {
-      builder.box(0, 26, 0, 133, 52, 122, "stone");
-      for (const [y, width, depth] of [[53, 121, 105], [88, 98, 87], [119, 77, 70], [146, 60, 55]]) {
-        builder.box(0, y + 15, 0, width - 16, 30, depth - 16, "ivory");
-        builder.box(0, y + 32, 0, width + 14, 7, depth + 14, "roof");
-        builder.pyramidRoof(0, y + 36, 0, width + 11, 16, "roof");
-        for (const x of [-width * 0.28, width * 0.28]) builder.box(x, y + 15, depth / 2 - 6, 9, 12, 3, "shadow");
+      // Five visible storeys above a sloped stone base, gold trim and shachi on the top roof.
+      builder.box(0, 20, 0, 138, 40, 126, "stone");
+      builder.box(0, 44, 0, 122, 10, 110, "stone");
+      for (const [y, width, depth] of [[50, 118, 102], [82, 98, 86], [111, 80, 70], [137, 64, 56], [160, 50, 44]]) {
+        builder.box(0, y + 13, 0, width - 14, 26, depth - 14, "ivory");
+        builder.box(0, y + 27, 0, width + 12, 6, depth + 12, "roof");
+        builder.pyramidRoof(0, y + 30, 0, width + 9, 13, "roof");
+        for (const x of [-width * 0.26, width * 0.26]) builder.box(x, y + 13, depth / 2 - 5, 8, 11, 3, "shadow");
+        builder.box(0, y + 24, depth / 2 - 4, width - 20, 2, 2, "gold");
       }
-      for (const x of [-47, 47]) builder.sphere(x, 187, 0, 4, "gold");
+      for (const x of [-20, 20]) {
+        builder.sphere(x, 205, 0, 3.5, "gold");
+        builder.beam([x, 205, 0], [x * 1.35, 213, 0], 2, "gold");
+      }
       break;
     }
     case "indiagate": {
@@ -849,6 +881,10 @@ function signatureModel(builder: SketchBuilder, kind: SignatureKind) {
       builder.box(0, 167, 0, 139, 7, 61, "pale");
       builder.box(0, 178, 0, 93, 15, 49, "stone");
       builder.box(0, 187, 0, 99, 4, 53, "pale");
+      // Shallow crown bowl above, and the Amar Jawan Jyoti flame burning under the arch.
+      builder.cylinder(0, 192, 0, 20, 26, 6, "stone", 20);
+      builder.cylinder(0, 12, 0, 3.5, 4.5, 8, "stone", 10);
+      builder.add(new THREE.ConeGeometry(2.2, 6, 8), "gold", 0, 19, 0);
       break;
     }
     case "parthenon": {

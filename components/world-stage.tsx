@@ -7,8 +7,9 @@ import * as THREE from "three";
 import type { City } from "@/lib/cities";
 import { getCityScene } from "@/lib/city-scenes";
 import { bindCityPicking, pickCity } from "@/lib/city-picking";
-import { getCitySignature, getCityVisualAnchor } from "@/lib/city-signatures";
-import { CityDistrict } from "@/components/city-district";
+import { getCityVisualAnchor } from "@/lib/city-signatures";
+import { CityDistrict, CITY_DISPLAY_SCALE, districtExtent, landmarkDisplayScale } from "@/components/city-district";
+import { LANDMARK_HEIGHT_METERS } from "@/components/landmark-model";
 import { EARTH_RADIUS, METERS_TO_WORLD, cityVector, tangentBasis } from "@/lib/globe";
 
 const ASSET_BASE = import.meta.env.BASE_URL ?? "/";
@@ -274,10 +275,40 @@ function CameraRig({
   const progress = useRef(1);
   const firstRun = useRef(true);
   const scene = selectedCity ? getCityScene(selectedCity.id) : undefined;
-  const signature = selectedCity ? getCitySignature(selectedCity.id) : undefined;
   const visualAnchor = useMemo(() => selectedCity ? getCityVisualAnchor(selectedCity) : undefined, [selectedCity]);
-  const minimumDistance = scene?.id === "beijing" ? 0.13 : scene?.id === "mumbai" || (selectedCity && !scene) ? 0.085 : selectedCity ? 0.22 : 2.1;
+  // One framing rule for every city: stand at the district rim just above the
+  // rooftops, look across the blocks at the landmark, keep the globe limb as horizon.
+  const framing = useMemo(() => {
+    if (!selectedCity) return { reach: 0, cameraHeight: 0, lookLift: 0, minDistance: 2.1, minPolar: 0, maxPolar: Math.PI };
+    const narrow = size.width < 680;
+    if (scene) {
+      const height = LANDMARK_HEIGHT_METERS[scene.landmark] * landmarkDisplayScale(scene.landmark) * CITY_DISPLAY_SCALE;
+      // Street-level stand inside the district rim: eye just above the rooftops so
+      // blocks fill the lower frame and the globe limb sits mid-frame as horizon.
+      const reach = Math.max(1.15 * districtExtent(scene.landmark) * CITY_DISPLAY_SCALE, 3.8 * height) * (narrow ? 1.25 : 1);
+      const cameraHeight = 0.022;
+      // Aim near street level: on a globe the limb dips ~12 deg, so pitching down
+      // this far brings the horizon arc back to mid-frame like a flat-city view.
+      const lookLift = 0.010;
+      const polar = Math.atan2(reach, cameraHeight - lookLift);
+      return {
+        reach,
+        cameraHeight,
+        lookLift,
+        minDistance: 0.55 * Math.hypot(reach, cameraHeight - lookLift),
+        minPolar: polar - Math.PI * 0.085,
+        maxPolar: Math.min(polar + Math.PI * 0.006, Math.PI * 0.495),
+      };
+    }
+    // Sketch vignettes have smaller footprints: stand closer, keep the same eye-level band.
+    const reach = narrow ? 0.075 : 0.06;
+    const polar = Math.atan2(reach, 0.0056);
+    return { reach, cameraHeight: 0.0136, lookLift: 0.008, minDistance: 0.04, minPolar: Math.PI * 0.36, maxPolar: Math.min(polar + Math.PI * 0.006, Math.PI * 0.47) };
+  }, [selectedCity, scene, size.width]);
+  const minimumDistance = framing.minDistance;
   const maximumDistance = 7.5;
+  const minPolarAngle = framing.minPolar;
+  const maxPolarAngle = framing.maxPolar;
   const motion = useMemo(() => ({
     arc: new THREE.Quaternion(),
     upArc: new THREE.Quaternion(),
@@ -309,23 +340,13 @@ function CameraRig({
       const longitude = scene?.displayLon ?? scene?.lon ?? visualAnchor?.lon ?? selectedCity.lon;
       const { up, east, north } = tangentBasis(latitude, longitude);
       const surface = cityVector(latitude, longitude);
-      const narrow = size.width < 680;
-      if (scene) {
-        // Approach Shanghai and Beijing from the south while keeping the globe's horizon visible.
-        const bearing = (scene.id === "shanghai" || scene.id === "beijing" ? 180 : scene.heading) * Math.PI / 180;
-        const focusDistance = scene.id === "shanghai" ? (narrow ? 0.42 : 0.34) : scene.id === "beijing" ? (narrow ? 0.33 : 0.24) : scene.id === "mumbai" ? (narrow ? 0.27 : 0.22) : (narrow ? 0.75 : 0.65);
-        const elevation = scene.id === "beijing" ? 0.47 : 0.76;
-        const approach = scene.id === "beijing" ? 1.18 : 1.08;
-        endPosition.current.copy(surface).addScaledVector(up, focusDistance * elevation)
-          .addScaledVector(north, Math.cos(bearing) * focusDistance * approach)
-          .addScaledVector(east, Math.sin(bearing) * focusDistance * approach);
-        endLookAt.current.copy(surface);
-      } else {
-        const focusDistance = narrow ? 0.22 : signature ? 0.15 : 0.17;
-        endPosition.current.copy(surface).addScaledVector(up, focusDistance * 0.37)
-          .addScaledVector(north, -focusDistance * 1.18);
-        endLookAt.current.copy(surface);
-      }
+      // Approach Shanghai and Beijing from the south; sketch cities from the south likewise.
+      const bearing = (scene ? (scene.id === "shanghai" || scene.id === "beijing" ? 180 : scene.heading) : 180) * Math.PI / 180;
+      endPosition.current.copy(surface).addScaledVector(up, framing.cameraHeight)
+        .addScaledVector(north, Math.cos(bearing) * framing.reach)
+        .addScaledVector(east, Math.sin(bearing) * framing.reach);
+      // Aim at mid-landmark so it sits centred instead of pinned to the top edge.
+      endLookAt.current.copy(surface).addScaledVector(up, framing.lookLift);
       endUp.current.copy(up);
     } else {
       endPosition.current.copy(cityVector(20, 68, size.width < 680 ? 5.9 : 5.15));
@@ -347,8 +368,8 @@ function CameraRig({
         controls.target.copy(endLookAt.current);
         controls.minDistance = minimumDistance;
         controls.maxDistance = maximumDistance;
-        controls.minPolarAngle = scene?.id === "beijing" || (selectedCity && !scene) ? Math.PI * 0.35 : selectedCity ? Math.PI * 0.30 : 0;
-        controls.maxPolarAngle = scene?.id === "beijing" || (selectedCity && !scene) ? Math.PI * 0.42 : selectedCity ? Math.PI * 0.34 : Math.PI;
+        controls.minPolarAngle = minPolarAngle;
+        controls.maxPolarAngle = maxPolarAngle;
         controls.update();
         controls.enableDamping = !reducedMotion;
         controls.enabled = true;
@@ -359,7 +380,7 @@ function CameraRig({
       progress.current = 0;
     }
     invalidate();
-  }, [camera, controlsRef, selectedCity, size.width, reducedMotion, invalidate, motion, scene, signature, visualAnchor, minimumDistance, maximumDistance]);
+  }, [camera, controlsRef, selectedCity, size.width, reducedMotion, invalidate, motion, scene, visualAnchor, framing, minimumDistance, maximumDistance]);
 
   useFrame((_, delta) => {
     const target = controlsRef.current?.target ?? motion.lookAt;
@@ -390,8 +411,8 @@ function CameraRig({
       if (progress.current >= 1) {
         controls.minDistance = minimumDistance;
         controls.maxDistance = maximumDistance;
-        controls.minPolarAngle = scene?.id === "beijing" || (selectedCity && !scene) ? Math.PI * 0.35 : selectedCity ? Math.PI * 0.30 : 0;
-        controls.maxPolarAngle = scene?.id === "beijing" || (selectedCity && !scene) ? Math.PI * 0.42 : selectedCity ? Math.PI * 0.34 : Math.PI;
+        controls.minPolarAngle = minPolarAngle;
+        controls.maxPolarAngle = maxPolarAngle;
         controls.update();
         controls.enableDamping = !reducedMotion;
         controls.enabled = true;
